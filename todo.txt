@@ -1,0 +1,9 @@
+1. DONE poll scheduling using node-cron or node-schedule
+2. since not saved in memory, then reload on bot reboot 
+3. DONE saving voting choices to user too
+4. DONE closing a poll (full)
+5. DONE closing a poll (timed, partial + user vote changes dont add more time to poll)
+6. direct message reminders
+7. proposal / choice votes
+8. redis memory dump to drive
+9. poll announcements

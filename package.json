@@ -5,16 +5,24 @@
   "author": "ed murphy <edzillion@gmail.com>",
   "description": "Circles house bot for fun and productivity",
   "dependencies": {
+    "coffee-script": "^1.12.7",
     "hubot": "^2.19.0",
+    "hubot-auth": "^2.1.0",
     "hubot-conversation": "^1.1.1",
     "hubot-diagnostics": "0.0.2",
+    "hubot-dynamic-conversation": "git+https://github.com/edzillion/hubot-dynamic-conversation.git",
+    "hubot-env": "0.0.2",
     "hubot-help": "^0.2.2",
     "hubot-heroku-keepalive": "^1.0.3",
     "hubot-redis-brain": "0.0.4",
     "hubot-rocketchat": "^1.0.12",
     "hubot-rules": "^0.1.2",
     "hubot-scripts": "^2.17.2",
-    "hubot-voting": "^1.0.0"
+    "moment": "^2.20.1",
+    "node-schedule": "^1.3.0",
+    "promise": "^8.0.1",
+    "redis-jsonify": "^1.0.1",
+    "uuid": "^3.2.1"
   },
   "engines": {
     "node": "0.10.x"

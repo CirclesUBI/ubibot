@@ -1,0 +1,276 @@
+{
+	"users": {
+		"1": {
+			"id": "1",
+			"name": "Shell",
+			"room": "Shell"
+		}
+	},
+	"_private": {
+		"7aade767-2f2c-3fa3-64db-efc702fa9d26": {
+			"source": {
+				"id": "1",
+				"name": "Shell",
+				"room": "Shell"
+			},
+			"dateTime": "2018-01-19T13:51:42.479Z",
+			"answers": [
+				{
+					"question": "What would you like to name the poll?",
+					"response": {
+						"type": "text",
+						"value": "ggg"
+					}
+				},
+				{
+					"question": "What kind of poll is it (full/partial)?",
+					"response": {
+						"type": "choice",
+						"value": "full"
+					}
+				},
+				{
+					"question": "Please describe the poll you are running:",
+					"response": {
+						"type": "text",
+						"value": "dddd"
+					}
+				},
+				{
+					"question": "Enter option 1:",
+					"response": {
+						"type": "text",
+						"value": "a"
+					}
+				},
+				{
+					"question": "Enter option 2:",
+					"response": {
+						"type": "text",
+						"value": "b"
+					}
+				}
+			],
+			"aborted": false,
+			"robot": {
+				"name": "ubibot",
+				"alias": false
+			}
+		},
+		"ubibot:polls": [
+			"7aade767-2f2c-3fa3-64db-efc702fa9d26"
+		],
+		"85b497f0-4744-aec5-dc7d-e57248ef4d93": {
+			"source": {
+				"id": "1",
+				"name": "Shell",
+				"room": "Shell"
+			},
+			"dateTime": "2018-01-19T14:04:20.391Z",
+			"answers": [
+				{
+					"question": "What would you like to name the poll?",
+					"response": {
+						"type": "text",
+						"value": "The Poll"
+					}
+				},
+				{
+					"question": "What kind of poll is it (full/partial)?",
+					"response": {
+						"type": "choice",
+						"value": "full"
+					}
+				},
+				{
+					"question": "Please describe the poll you are running:",
+					"response": {
+						"type": "text",
+						"value": "To Decide Things"
+					}
+				},
+				{
+					"question": "Enter option 1:",
+					"response": {
+						"type": "text",
+						"value": "Yes"
+					}
+				},
+				{
+					"question": "Enter option 2:",
+					"response": {
+						"type": "text",
+						"value": "No"
+					}
+				}
+			],
+			"aborted": false,
+			"robot": {
+				"name": "ubibot",
+				"alias": false
+			}
+		},
+		"polls": [
+			"85b497f0-4744-aec5-dc7d-e57248ef4d93",
+			"4e1f63da-b732-0d86-4938-d686df09490e",
+			"8cdd5c8a-2e76-0e30-0d82-c3f6b972fbca"
+		],
+		"f12b8ab0-05bd-4f4b-031b-57d4790e0e30": {
+			"source": {
+				"id": "1",
+				"name": "Shell",
+				"room": "Shell"
+			},
+			"dateTime": "2018-01-19T14:54:13.022Z",
+			"answers": [
+				{
+					"question": "What would you like to name the poll?",
+					"response": {
+						"type": "text",
+						"value": "Whos the best?"
+					}
+				},
+				{
+					"question": "What kind of poll isit (full/partial)?",
+					"response": {
+						"type": "choice",
+						"value": "full"
+					}
+				},
+				{
+					"question": "Please describe the poll you are running:",
+					"response": {
+						"type": "text",
+						"value": "Who is better than billy?"
+					}
+				},
+				{
+					"question": "Enter option1:",
+					"response": {
+						"type": "text",
+						"value": "Billy"
+					}
+				},
+				{
+					"question": "Enteroption 2:",
+					"response": {
+						"type": "text",
+						"value": "Bob"
+					}
+				}
+			],
+			"aborted": false,
+			"robot": {
+				"name": "ubibot",
+				"alias": false
+			}
+		},
+		"4e1f63da-b732-0d86-4938-d686df09490e": {
+			"source": {
+				"id": "1",
+				"name": "Shell",
+				"room": "Shell"
+			},
+			"dateTime": "2018-01-19T14:55:21.272Z",
+			"answers": [
+				{
+					"question": "What wouldyou like to name the poll?",
+					"response": {
+						"type": "text",
+						"value": "Whos the best?"
+					}
+				},
+				{
+					"question": "What kind of poll is it (full/partial)?",
+					"response": {
+						"type": "choice",
+						"value": "full"
+					}
+				},
+				{
+					"question": "Please describe the poll you are running:",
+					"response": {
+						"type": "text",
+						"value": "Whos the best?"
+					}
+				},
+				{
+					"question": "Enter option 1:",
+					"response": {
+						"type": "text",
+						"value": "Bob"
+					}
+				},
+				{
+					"question": "Enter option 2:",
+					"response": {
+						"type": "text",
+						"value": "Billy"
+					}
+				}
+			],
+			"aborted": false,
+			"robot": {
+				"name": "ubibot",
+				"alias": false
+			}
+		},
+		"8cdd5c8a-2e76-0e30-0d82-c3f6b972fbca": {
+			"source": {
+				"id": "1",
+				"name": "Shell",
+				"room": "Shell"
+			},
+			"dateTime": "2018-01-19T15:11:36.387Z",
+			"answers": [
+				{
+					"question": "What would you like to name the poll?",
+					"response": {
+						"type": "text",
+						"value": "Highest Mountain"
+					}
+				},
+				{
+					"question": "What kind of poll is it (full/partial)?",
+					"response": {
+						"type": "choice",
+						"value": "full"
+					}
+				},
+				{
+					"question": "Please describe the poll you are running:",
+					"response": {
+						"type": "text",
+						"value": "Which is the highest mountain in Europe?"
+					}
+				},
+				{
+					"question": "How many options should the poll include?",
+					"response": {
+						"type": "series",
+						"value": "2"
+					}
+				},
+				{
+					"question": "Enter option 1:",
+					"response": {
+						"type": "text",
+						"value": "Mount Blanc"
+					}
+				},
+				{
+					"question": "Enter option 2:",
+					"response": {
+						"type": "text",
+						"value": "The Alps"
+					}
+				}
+			],
+			"aborted": false,
+			"robot": {
+				"name": "ubibot",
+				"alias": false
+			}
+		}
+	}
+}
