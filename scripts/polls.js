@@ -37,35 +37,84 @@ function userHasRole(robot,msg,role) {
   return true;
 }
 
-function endPoll(robot,pollID) {
+function startPoll(robot, pollID) {
+  announcePoll(robot, pollID);
+}
 
-  let poll = robot.brain.get(pollID);   
+function announcePoll(robot, pollID) {
+
+  let poll = robot.brain.get(pollID);
   if (poll == undefined) {
     console.log('Error: poll not found in brain: '+pollID);
   }
+
+  let pollMessage = 'Poll #'+(poll.pollNum+1)+' started!\n';
+  pollMessage += 'Title: '+poll.title + ' ('+poll.type.toUpperCase()+')\n';
+  pollMessage += 'Description: '+poll.description +'\n';
+  
+  for (let i=0; i<poll.numOptions; i++) {    
+    pollMessage += poll.letters[i]+'. '+poll.choices[i] +'\n';
+  }
+
+  let pollAudience = [testUserID];//robot.auth.usersWithRole('poll');
+  for (let i=0; i<pollAudience.length; i++) {      
+    let targetUserID = pollAudience[i];
+    if (poll.votes && poll.votes[targetUserID] != undefined) {
+      pollMessage += 'You have previously voted on this poll.' +'\n';
+      pollMessage += 'You voted '+poll.letters[poll.votes[targetUserID]]+'\n';        
+    }
+    else {
+      pollMessage += 'You have not yet voted on this poll.' +'\n';
+    }    
+    
+    let end = Moment(poll.endTime);
+    pollMessage += 'Poll ends '+end.format('LL');      
+  
+    robot.send({user: targetUserID}, pollMessage);
+  }
+}
+
+function endPoll(robot,pollID) {
+
+  let poll = robot.brain.get(pollID);
+  if (poll == undefined) {
+    console.log('Error: poll not found in brain: '+pollID);
+  }
+  
+  poll.ended = true;
+  
   poll.votes = [];
   poll.votes['a3kgfm9g7l'] = 1;
   poll.votes['sdsd34fds1'] = 1;
   poll.votes['kjdl73fds2'] = 1;
   poll.votes['fgdg5446sd'] = 0;
 
+  announcePollEnd(robot,pollID);
+}
+
+function announcePollEnd(robot,pollID) {
+  
+  let poll = robot.brain.get(pollID);
+  if (poll == undefined) {
+    console.log('Error: poll not found in brain: '+pollID);
+  }
+
   if (poll.votes == undefined) {
-    announcePollEnd(robot,poll,false,'no votes cast');
+    robot.send({room:'Shell'}, 'Poll failed, no votes cast');
     return;
   }
-  var pollCounts = {};
+  let pollCounts = {};
   Object.keys(poll.votes).forEach(function(userID, key, _array) {      
     let num = poll.votes[userID];
-    if (num !== undefined)     
+    if (num !== undefined)
       pollCounts[num] = pollCounts[num] ? pollCounts[num] + 1 : 1;
   });
-  //console.log(pollCounts);
-  let resultText = 'Poll #'+poll.pollNum+' complete!\n';
+  
+  let resultText = 'Poll #'+(poll.pollNum+1)+' complete!\n';
   resultText += 'Vote Count:\n';
 
   if (poll.type === 'choice') {
 
-    let baseCode = 'A'.charCodeAt(0);
     let highestVotes = {choice:null,count:0,draw:false,letter:null};
     Object.keys(pollCounts).forEach(function(element, key, _array) {
       let letter = poll.letters[element];  
@@ -104,40 +153,6 @@ function endPoll(robot,pollID) {
   }
 
   robot.send({room:'Shell'}, resultText);
-}
-
-function announcePollEnd(robot, poll, success, reason) {
-  if (!success) {
-    robot.send({room:'Shell'}, 'Poll failed, '+reason);
-  }
-}
-
-function announcePollStart(robot, poll) {
-
-  let pollMessage = 'Poll #'+(poll.pollNum+1)+' started!\n';
-  pollMessage += 'Title: '+poll.title + ' ('+poll.type.toUpperCase()+')\n';
-  pollMessage += 'Description: '+poll.description +'\n';
-  
-  for (let i=0; i<poll.numOptions; i++) {    
-    pollMessage += poll.letters[i]+'. '+poll.choices[i] +'\n';
-  }
-
-  let pollAudience = [testUserID];//robot.auth.usersWithRole('poll');
-  for (let i=0; i<pollAudience.length; i++) {      
-    let targetUserID = pollAudience[i];
-    if (poll.votes && poll.votes[targetUserID] != undefined) {
-      pollMessage += 'You have previously voted on this poll.' +'\n';
-      pollMessage += 'You voted '+poll.letters[poll.votes[targetUserID]]+'\n';        
-    }   
-    else {
-      pollMessage += 'You have not yet voted on this poll.' +'\n';
-    }    
-
-    let end = Moment(poll.endTime);
-    pollMessage += 'Poll ends '+end.format('LL');      
-  
-    robot.send({user: targetUserID}, pollMessage);
-  }
 }
 
 module.exports = function(robot) {
@@ -339,7 +354,7 @@ module.exports = function(robot) {
       pollData.schedule = sched;
       robot.brain.set(key, pollData);
 
-      announcePollStart(robot, pollData);
+      startPoll(robot, pollData.pollID);
     });
   });
 
@@ -462,6 +477,7 @@ module.exports = function(robot) {
     if (!userHasRole(robot,msg,'core'))
       return;
 
+    let replyString = '';
     let callerUserID = msg.message.user.id;
     let timeNow = Moment();
     var pollList = robot.brain.get('polls');          
@@ -469,15 +485,20 @@ module.exports = function(robot) {
         msg.reply('No polls underway.');
         return;
     }
-    let replyString = 'Polls you have not voted on:\n';     
+    let openPollList = '';
     for (let i=0; i<pollList.length; i++) {
       var poll = robot.brain.get(pollList[i]);
       let end = Moment(poll.endTime);
       if (end.isAfter(timeNow) && (!poll.votes || poll.votes[callerUserID] == undefined)) {          
-        replyString += (i+1) + '. ' + poll.title + '\n';
+        openPollList += (i+1) + '. ' + poll.title + '\n';
       }        
     } 
-    replyString = replyString.slice(0, -1); //cut of last '\n';
+    if (openPollList) {
+      replyString = 'Polls you have not voted on:\n' + openPollList;
+    }
+    else {
+      replyString = 'There are no current polls you have not voted on.';
+    }
     msg.reply(replyString);
   });
 
