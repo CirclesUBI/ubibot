@@ -10,12 +10,11 @@ const UuidV1 = require('uuid/v1');
 
 const pollTitlePosition = 0;
 const pollTypePosition = 1;
-const pollAudiencePosition = 2;
+const pollScopePosition = 2;
 const pollDescriptionPosition = 3;
-const pollOptionsPosition = 4;
+const pollNumOptionsPosition = 4;
 const pollChoicesPosition = 5;
 const pollProposalPosition = 4;
-
 
 const testUserID = 'a3kgfm9g7l';
 
@@ -24,8 +23,7 @@ function userHasRole(robot,msg,role) {
   return true;
 
   robot.logger.info("Checking if user: "+msg.message.user.name+" has role "+role);
-  var user;  
-  user = robot.brain.userForName(msg.message.user.name);
+  let user = robot.brain.userForName(msg.message.user.name);
   if (!user) {
     msg.reply(user.name + " does not exist");
     return false;
@@ -50,7 +48,6 @@ function endPoll(robot,pollID) {
   poll.votes['sdsd34fds1'] = 1;
   poll.votes['kjdl73fds2'] = 1;
   poll.votes['fgdg5446sd'] = 0;
-  console.log(poll.votes);
 
   if (poll.votes == undefined) {
     announcePollEnd(robot,poll,false,'no votes cast');
@@ -66,14 +63,13 @@ function endPoll(robot,pollID) {
   let resultText = 'Poll #'+poll.pollNum+' complete!\n';
   resultText += 'Vote Count:\n';
 
-  let pollType = poll.answers[pollTypePosition].response.value;
-  if (pollType === 'choice') {
+  if (poll.type === 'choice') {
 
     let baseCode = 'A'.charCodeAt(0);
     let highestVotes = {choice:null,count:0,draw:false,letter:null};
     Object.keys(pollCounts).forEach(function(element, key, _array) {
-      let letter = String.fromCharCode(baseCode+Number(element));   
-      let answernum = pollChoicesPosition+Number(element);
+      let letter = poll.letters[element];  
+      let pollChoice = poll.choices[element];
       let voteCount = pollCounts[element];
       if (voteCount >= highestVotes.count) {
         highestVotes.choice = Number(element);
@@ -82,9 +78,8 @@ function endPoll(robot,pollID) {
         if (voteCount == highestVotes.count)
           highestVotes.draw = true;
         highestVotes.count = voteCount;
-        //console.log(highestVotes);
       }
-      resultText += voteCount+' votes for '+letter+':'+poll.answers[answernum].response.value + '\n';    
+      resultText += voteCount+' votes for '+letter+':'+pollChoice+'\n';    
     });
 
     if (highestVotes.draw === true)
@@ -92,16 +87,16 @@ function endPoll(robot,pollID) {
     else 
       resultText += 'Result: win - option '+highestVotes.letter+' with '+highestVotes.count+' votes';
   }
-  else if (pollType === 'proposal' || pollType === 'prop') {
-    let letters = ['N','Y','A'];
+  else if (poll.type === 'proposal' || poll.type === 'prop') {
+
     Object.keys(pollCounts).forEach(function(element, key, _array) {        
-      let answernum = pollChoicesPosition+Number(element);
+      let pollChoice = poll.choices[element];
       let voteCount = pollCounts[element];
-      resultText += voteCount+' votes for '+letters[key]+':'+poll.answers[answernum].response.value + '\n';    
+      resultText += voteCount+' votes for '+poll.letters[key]+':'+pollChoice+ '\n';    
     });
 
-    let yesVotes = pollCounts[letters.indexOf('Y')];
-    let noVotes = pollCounts[letters.indexOf('N')];
+    let yesVotes = pollCounts[poll.letters.indexOf('Y')];
+    let noVotes = pollCounts[poll.letters.indexOf('N')];
     if (yesVotes /2 >= noVotes)
       resultText += 'Result: success - quorum reached for Y with '+yesVotes+' votes';  
     else 
@@ -117,36 +112,31 @@ function announcePollEnd(robot, poll, success, reason) {
   }
 }
 
-function announcePollStart(robot, poll, msg) {
-  if (poll.answers[pollAudiencePosition].response.value == 'full') {
+function announcePollStart(robot, poll) {
 
-    let pollMessage = 'Poll #'+(poll.pollNum+1)+' started!\n';
-    
-    pollMessage += 'Title: '+poll.answers[pollTitlePosition].response.value + ' ('+poll.answers[pollTypePosition].response.value.toUpperCase()+')\n';
-    pollMessage += 'Description: '+poll.answers[pollDescriptionPosition].response.value +'\n';
-    let amtOptions = poll.answers[pollOptionsPosition].response.value;
-    
-    for (let i=0, letter = 'A'.charCodeAt(0); i<amtOptions; i++, letter++) {    
-      pollMessage += String.fromCharCode(letter)+'. '+poll.answers[pollChoicesPosition+i].response.value +'\n';
-    }
+  let pollMessage = 'Poll #'+(poll.pollNum+1)+' started!\n';
+  pollMessage += 'Title: '+poll.title + ' ('+poll.type.toUpperCase()+')\n';
+  pollMessage += 'Description: '+poll.description +'\n';
+  
+  for (let i=0; i<poll.numOptions; i++) {    
+    pollMessage += poll.letters[i]+'. '+poll.choices[i] +'\n';
+  }
 
-    let pollAudience = [testUserID];//robot.auth.usersWithRole('poll');
-    for (let i=0; i<pollAudience.length; i++) {      
-      let targetUserID = pollAudience[i];
-      if (poll.votes && poll.votes[targetUserID] != undefined) {
-        pollMessage += 'You have previously voted on this poll.' +'\n';
-        let charCode = 'A'.charCodeAt(0) + poll.votes[targetUserID];
-        pollMessage += 'You voted '+String.fromCharCode(charCode) +'\n';        
-      }   
-      else {
-        pollMessage += 'You have not yet voted on this poll.' +'\n';
-      }    
+  let pollAudience = [testUserID];//robot.auth.usersWithRole('poll');
+  for (let i=0; i<pollAudience.length; i++) {      
+    let targetUserID = pollAudience[i];
+    if (poll.votes && poll.votes[targetUserID] != undefined) {
+      pollMessage += 'You have previously voted on this poll.' +'\n';
+      pollMessage += 'You voted '+poll.letters[poll.votes[targetUserID]]+'\n';        
+    }   
+    else {
+      pollMessage += 'You have not yet voted on this poll.' +'\n';
+    }    
 
-      let end = Moment(poll.endTime);
-      pollMessage += 'Poll ends '+end.format('LL');      
-    
-      robot.send({user: targetUserID}, pollMessage);
-    }
+    let end = Moment(poll.endTime);
+    pollMessage += 'Poll ends '+end.format('LL');      
+  
+    robot.send({user: targetUserID}, pollMessage);
   }
 }
 
@@ -162,7 +152,6 @@ module.exports = function(robot) {
     robot.brain.data.users[testUserID] = robot.brain.data.users[msg.message.user.id];
     robot.brain.data.users[testUserID].id = testUserID;
     robot.brain.save();
-    console.log(robot.brain.data.users);
 
     var conversationModel, dialog;
     msg.reply("Sure, just answer the following questions.");
@@ -292,16 +281,40 @@ module.exports = function(robot) {
       ]
     };
     dialog = conversation.start(msg, conversationModel, function(err, msg, dialog) {
-      var dialogData, guid, pollList;
+      var guid, pollList;
       if (err != null) {
         return console.log("error occured in the dialog " + err);
       }
       msg.reply("Thanks for using ubibot! I'm always here to help.");
-      dialogData = dialog.fetch();
-      dialogData.endTime = Moment().add(20,'seconds');
+      let dialogData = dialog.fetch();
+      let pollData = {
+        title: dialogData.answers[pollTitlePosition].response.value,
+        description: dialogData.answers[pollDescriptionPosition].response.value,
+        type: dialogData.answers[pollTypePosition].response.value,
+        scope: dialogData.answers[pollScopePosition].response.value,
+        letters: null,
+        numOptions: null,
+        choices: []
+      };
+      if (pollData.type === 'choice') {
+        pollData.numOptions = dialogData.answers[pollNumOptionsPosition].response.value;
+        for (let i=0; i<pollData.numOptions; i++) {
+          pollData.choices.push(dialogData.answers[pollChoicesPosition+i].response.value);
+        }
+        pollData.letters = ['A','B','C','D','E','F','G','H','I','J'];
+      }
+      else {
+        pollData.choices[0] = dialogData.answers[pollProposalPosition+1].response.value;
+        pollData.choices[1] = dialogData.answers[pollProposalPosition].response.value;
+        pollData.choices[2] = 'Abstain';
+        pollData.letters = ['N','Y','A'];
+        pollData.numOptions = 3;
+      }
+
+      pollData.endTime = Moment().add(20,'seconds');
       let uuid = UuidV1();
       let key = 'poll:'+uuid;     
-      dialogData.pollID = key;
+      pollData.pollID = key;
       var user = robot.brain.data.users[msg.message.user.id];
       if (!user.polls) {
         user.polls = [];        
@@ -311,22 +324,22 @@ module.exports = function(robot) {
       pollList = robot.brain.get('polls');
       if (!pollList) {
         pollList = [key]; 
-        dialogData.pollNum = 0;       
+        pollData.pollNum = 0;       
       }
       else {
         pollList.push(key);
-        dialogData.pollNum = pollList.length-1;
+        pollData.pollNum = pollList.length-1;
       }
       robot.brain.set('polls', pollList);
 
-      var sched = Schedule.scheduleJob(dialogData.endTime.toDate(), function(robot,pollID){
+      var sched = Schedule.scheduleJob(pollData.endTime.toDate(), function(robot,pollID){
         endPoll(robot,pollID);
       }.bind(null,robot,key));
 
-      dialogData.schedule = sched;
-      robot.brain.set(key, dialogData);
+      pollData.schedule = sched;
+      robot.brain.set(key, pollData);
 
-      announcePollStart(robot, dialogData);
+      announcePollStart(robot, pollData);
     });
   });
 
@@ -356,37 +369,24 @@ module.exports = function(robot) {
       return;
     }
 
-    let pollType = poll.answers[pollTypePosition].response.value;
-    let voteIndex, amtOptions, voteText;
-    let propLetters = ['Y','N','A'];
-    if (pollType === 'choice') {
-      voteIndex = vote.charCodeAt(0) - 'A'.charCodeAt(0);
-      voteText = poll.answers[voteIndex+pollChoicesPosition].response.value;
-      amtOptions = Number(poll.answers[pollOptionsPosition].response.value);
-    }
-    else {
-      voteIndex = propLetters.indexOf(vote);
-      if (voteIndex === 2) //abstain
-        voteText = 'Abstain';
-      else 
-        voteText = poll.answers[voteIndex+pollProposalPosition].response.value;
-      amtOptions = 3;
-    }
-    console.log(voteIndex);
-    if (voteIndex == -1 || voteIndex >= amtOptions ) {
+    let voteIndex = poll.letters.indexOf(vote);
+    let voteText = poll.choices[voteIndex];
+
+
+    if (voteIndex < 0 || voteIndex >= poll.numOptions ) {
       msg.reply('No poll option '+vote);
       return;
     }
     if (!poll.votes) 
         poll.votes = [];
     poll.votes[callerUserID] = vote; 
-    msg.reply('You have voted '+vote+':'+voteText+ ' on poll '+msg.match[2]+':'+poll.answers[pollTitlePosition].response.value);
+    msg.reply('You have voted '+vote+':'+poll+ ' on poll '+msg.match[2]+':'+poll.title);
     if (!poll.votes)
         poll.votes = [];
     poll.votes[String(callerUserID)] = voteIndex;    
     robot.brain.data.users[callerUserID].polls[poll.pollID] = {'vote':voteIndex};
 
-    let pollAudience = poll.answers[pollAudiencePosition].response.value;
+    let pollAudience = poll.scope;
     if (pollAudience === 'partial' || pollAudience === 'part') {
       let newEndDate = Moment().add(10,'minutes').toDate();
       let success = poll.schedule.reschedule(newEndDate);
@@ -423,17 +423,17 @@ module.exports = function(robot) {
       msg.reply('No vote to change. You have never voted on this poll');      
       return;
     }
-    let amtOptions = Number(poll.answers[pollOptionsPosition].response.value);
-    if (voteIndex >= amtOptions ) {
+    
+    if (voteIndex < 0 || voteIndex >= poll.numOptions ) {
       msg.reply('No poll option '+vote);
       return;
     }
-    poll.votes[String(callerUserID)] = voteIndex; 
+    poll.votes[callerUserID] = voteIndex; 
 
     robot.brain.data.users[callerUserID].polls[poll.pollID].vote = voteIndex;
     robot.brain.save();
 
-    msg.reply('Changed vote to '+vote+':'+poll.answers[pollChoicesPosition+voteIndex].response.value+ ' on poll '+pollIndex+':'+poll.answers[pollTitlePosition].response.value);
+    msg.reply('Changed vote to '+vote+': '+poll.choices[voteIndex]+ ' on poll '+pollIndex+':'+poll.title);
 
   });
 
@@ -451,7 +451,7 @@ module.exports = function(robot) {
     let replyString = ''; 
     for (let i=0; i<pollList.length; i++) {
       poll = robot.brain.get(pollList[i]);
-      replyString += (i+1) + '. ' + poll.answers[pollTitlePosition].response.value + '\n';        
+      replyString += (i+1) + '. ' + poll.title + '\n';        
     }    
     replyString = replyString.slice(0, -1); //cut of last '\n';
     msg.reply(replyString);
@@ -474,7 +474,7 @@ module.exports = function(robot) {
       var poll = robot.brain.get(pollList[i]);
       let end = Moment(poll.endTime);
       if (end.isAfter(timeNow) && (!poll.votes || poll.votes[callerUserID] == undefined)) {          
-        replyString += (i+1) + '. ' + poll.answers[pollTitlePosition].response.value + '\n';
+        replyString += (i+1) + '. ' + poll.title + '\n';
       }        
     } 
     replyString = replyString.slice(0, -1); //cut of last '\n';
@@ -503,40 +503,17 @@ module.exports = function(robot) {
       return;
     }
 
-    let replyString = 'Title: '+poll.answers[pollTitlePosition].response.value + ' ('+poll.answers[1].response.value.toUpperCase()+')\n';
-    replyString += 'Description: '+poll.answers[pollDescriptionPosition].response.value +'\n';
-    
-    
-    let pollType = poll.answers[pollTypePosition].response.value;    
-    if (pollType === 'choice') {
-      let amtOptions = poll.answers[pollOptionsPosition].response.value;
+    let replyString = 'Title: '+poll.title + ' ('+poll.type.toUpperCase()+')\n';
+    replyString += 'Description: '+description +'\n';
       
-      for (let i=0, letter = 'A'.charCodeAt(0); i<amtOptions; i++, letter++) {    
-        replyString += String.fromCharCode(letter)+'. '+poll.answers[pollChoicesPosition+i].response.value +'\n';
-      }
+    for (let i=0; i<poll.numOptions; i++) {    
+      pollMessage += poll.letters[i]+'. '+poll.choices[i] +'\n';
     }
-    else {
-      console.log(poll.answers);
-      let letters = ['Y','N'];
-      for (let i=0; i<letters.length; i++) {    
-        let letter = letters[i];
-        replyString += letter+'. '+poll.answers[pollProposalPosition+i].response.value +'\n';
-      }
-      replyString += 'A. Abstain\n';
-    }
+    
     let callerUserID = msg.message.user.id;
     if (poll.votes && poll.votes[callerUserID] != undefined) {
         replyString += 'You have previously voted on this poll.' +'\n';
-        let propLetters = ['Y','N','A'];
-        let char;
-        if (pollType == 'choice') {
-          let charCode = 'A'.charCodeAt(0) + poll.votes[callerUserID];
-          char = String.fromCharCode(charCode);
-        }
-        else {
-          char = propLetters[poll.votes[callerUserID]];
-        }
-        replyString += 'You voted '+char+'\n';        
+        replyString += 'You voted '+poll.choices[poll.votes[callerUserID]]+'\n';        
     }   
     else {
       replyString += 'You have not yet voted on this poll.' +'\n';
