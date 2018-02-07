@@ -84,7 +84,7 @@ function endPoll(robot,pollID) {
   poll.ended = true;
   
   poll.votes = [];
-  poll.votes['a3kgfm9g7l'] = 1;+
+  poll.votes['a3kgfm9g7l'] = 1;
 
   poll.votes['sdsd34fds1'] = 1;
   poll.votes['kjdl73fds2'] = 1;
@@ -587,6 +587,9 @@ module.exports = function(robot) {
 
   robot.respond(/show poll ([1-9])/i, function(msg) {
 
+    let pollMessage = '';
+    let callerUserID = msg.message.user.id;
+
     if (!userHasRole(robot,msg,'core'))
       return;
       
@@ -607,28 +610,29 @@ module.exports = function(robot) {
     }
 
     let replyString = 'Title: '+poll.title + ' ('+poll.type.toUpperCase()+')\n';
-    replyString += 'Description: '+description +'\n';
+    replyString += 'Description: '+poll.description +'\n';
       
     for (let i=0; i<poll.numOptions; i++) {    
       pollMessage += poll.letters[i]+'. '+poll.choices[i] +'\n';
     }
     
-    let callerUserID = msg.message.user.id;
-    if (poll.votes && poll.votes[callerUserID] != undefined) {
-        replyString += 'You have previously voted on this poll.' +'\n';
-        replyString += 'You voted '+poll.choices[poll.votes[callerUserID]]+'\n';        
-    }   
-    else {
-      replyString += 'You have not yet voted on this poll.' +'\n';
-    }    
     let now = Moment();
     let end = Moment(poll.endTime);
     if (now.isAfter(end)) {
       replyString += 'Poll has already ended'; 
     }        
     else {
+      if (poll.votes && poll.votes[callerUserID] != undefined) {
+        replyString += 'You have previously voted on this poll.' +'\n';
+        replyString += 'You voted '+poll.choices[poll.votes[callerUserID]]+'\n';        
+      }   
+      else {
+        replyString += 'You have not yet voted on this poll.' +'\n';
+      }    
+
       replyString += 'Poll ends '+end.format('LL');
     }
+    
     msg.reply(replyString);
   });
 };
