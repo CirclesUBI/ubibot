@@ -84,10 +84,53 @@ function endPoll(robot,pollID) {
   poll.ended = true;
   
   poll.votes = [];
-  poll.votes['a3kgfm9g7l'] = 1;
+  poll.votes['a3kgfm9g7l'] = 1;+
+
   poll.votes['sdsd34fds1'] = 1;
   poll.votes['kjdl73fds2'] = 1;
   poll.votes['fgdg5446sd'] = 0;
+
+  poll.results = {};
+  poll.results.voteCounts = []; 
+
+  if (poll.type === 'choice') {
+
+    let highestVotes = {choice:null,count:0,draw:false,letter:null};
+    Object.keys(pollCounts).forEach(function(element, key, _array) {
+      let letter = poll.letters[element];  
+      let pollChoice = poll.choices[element];
+      let voteCount = pollCounts[element];
+      if (voteCount >= highestVotes.count) {
+        highestVotes.choice = Number(element);
+        highestVotes.letter = letter;      
+        highestVotes.draw = false;
+        if (voteCount == highestVotes.count)
+          highestVotes.draw = true;
+        highestVotes.count = voteCount;
+      }
+      resultText += voteCount+' votes for '+letter+':'+pollChoice+'\n';    
+    });
+
+    if (highestVotes.draw === true)
+      resultText += 'Result: draw - no clear winner';
+    else 
+      resultText += 'Result: win - option '+highestVotes.letter+' with '+highestVotes.count+' votes';
+  }
+  else if (poll.type === 'proposal' || poll.type === 'prop') {
+
+    Object.keys(pollCounts).forEach(function(element, key, _array) {        
+      let pollChoice = poll.choices[element];
+      let voteCount = pollCounts[element];
+      resultText += voteCount+' votes for '+poll.letters[key]+':'+pollChoice+ '\n';    
+    });
+
+    let yesVotes = pollCounts[poll.letters.indexOf('Y')];
+    let noVotes = pollCounts[poll.letters.indexOf('N')];
+    if (yesVotes /2 >= noVotes)
+      resultText += 'Result: success - quorum reached for Y with '+yesVotes+' votes';  
+    else 
+      resultText += 'Result: failed - no quorum';      
+  }
 
   announcePollEnd(robot,pollID);
 }
@@ -326,7 +369,7 @@ module.exports = function(robot) {
         pollData.numOptions = 3;
       }
 
-      pollData.endTime = Moment().add(20,'seconds');
+      pollData.endTime = Moment().add(20,'minutes');
       let uuid = UuidV1();
       let key = 'poll:'+uuid;     
       pollData.pollID = key;
@@ -452,6 +495,46 @@ module.exports = function(robot) {
 
   });
 
+
+  robot.respond(/delegate vote on poll ([1-9]{1,2}) to ([A-Za-z][A-Za-z0-9._]{2,25})/i, function(msg) {
+
+    if (!userHasRole(robot,msg,'core'))
+      return;
+
+    let pollList = robot.brain.get('polls');
+    if (pollList == undefined) {
+      msg.reply('No polls underway.');
+      return;
+    }
+    let delegateUsername = msg.match[2];
+    let user  = robot.brain.usersForFuzzyName(delegateUsername);
+
+    if (user === undefined) {
+      msg.reply('No username: '+delegateUsername+'. Have you spelled it correctly?');
+      return;
+    }
+
+    let pollIndex = msg.match[1] - 1;
+    let callerUserID = msg.message.user.id;
+    let poll = robot.brain.get(pollList[pollIndex]);
+
+    if (!poll) {
+      msg.reply('No poll number '+msg.match[1]);
+      return;
+    }
+    else if (poll.votes[callerUserID]) {
+      //already voted
+      msg.reply('You have already voted on this poll');      
+      return;
+    }
+    
+    poll.votes[callerUserID] = 'delegate:'+userToDelegateTo;
+    robot.brain.data.users[callerUserID].polls[poll.pollID].vote = 'delegate:'+userToDelegateTo; 
+    robot.brain.save();
+
+    msg.reply('Delegated vote to '+userToDelegateTo+' on poll '+pollIndex+':'+poll.title);
+  });
+
   robot.respond(/list polls/i, function(msg) {
 
     if (!userHasRole(robot,msg,'core'))
@@ -506,7 +589,6 @@ module.exports = function(robot) {
 
     if (!userHasRole(robot,msg,'core'))
       return;
-
       
     let pollList = robot.brain.get('polls');
     if (pollList == undefined) {
@@ -549,6 +631,4 @@ module.exports = function(robot) {
     }
     msg.reply(replyString);
   });
-
-  
 };

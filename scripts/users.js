@@ -18,7 +18,6 @@ function userHasRole(robot,msg,role) {
   return true;
 }
 
-
 module.exports = function(robot) {
 
   // adds all users to robot brain, should only need to be done once in a bot's life
@@ -61,7 +60,6 @@ module.exports = function(robot) {
     robot.brain.data.users = [];
     return msg.reply("Users wiped");
   });
-
 
   // list all users by name
   robot.respond(/list all users/i, function(msg) {
@@ -125,4 +123,5 @@ module.exports = function(robot) {
       msg.send("Uh, sorry I don't know, something's not working");
     });
   });
+
 };
