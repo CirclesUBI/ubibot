@@ -18,193 +18,223 @@ const pollProposalPosition = 4;
 
 const testUserID = 'a3kgfm9g7l';
 
-function userHasRole(robot,msg,role) {
-  
-  return true;
-
-  robot.logger.info("Checking if user: "+msg.message.user.name+" has role "+role);
-  let user = robot.brain.userForName(msg.message.user.name);
-  if (!user) {
-    msg.reply(user.name + " does not exist");
-    return false;
-  }  
-  else if (!robot.auth.hasRole(user, role)) {
-    robot.logger.info("Permission Denied");
-    msg.reply("Access Denied. You need "+role+" role to perform this action.");
-    return false;
-  }
-  robot.logger.info("Permission Granted");
-  return true;
-}
-
-function startPoll(robot, pollID) {
-  announcePoll(robot, pollID);
-}
-
-function announcePoll(robot, pollID) {
-
-  let poll = robot.brain.get(pollID);
-  if (poll == undefined) {
-    console.log('Error: poll not found in brain: '+pollID);
-  }
-
-  let pollMessage = 'Poll #'+(poll.pollNum+1)+' started!\n';
-  pollMessage += 'Title: '+poll.title + ' ('+poll.type.toUpperCase()+')\n';
-  pollMessage += 'Description: '+poll.description +'\n';
-  
-  for (let i=0; i<poll.numOptions; i++) {    
-    pollMessage += poll.letters[i]+'. '+poll.choices[i] +'\n';
-  }
-
-  let pollAudience = [testUserID];//robot.auth.usersWithRole('poll');
-  for (let i=0; i<pollAudience.length; i++) {      
-    let targetUserID = pollAudience[i];
-    if (poll.votes && poll.votes[targetUserID] != undefined) {
-      pollMessage += 'You have previously voted on this poll.' +'\n';
-      pollMessage += 'You voted '+poll.letters[poll.votes[targetUserID]]+'\n';        
-    }
-    else {
-      pollMessage += 'You have not yet voted on this poll.' +'\n';
-    }    
-    
-    let end = Moment(poll.endTime);
-    pollMessage += 'Poll ends '+end.format('LL');      
-  
-    robot.send({user: targetUserID}, pollMessage);
-  }
-}
-
-function endPoll(robot,pollID) {
-
-  let poll = robot.brain.get(pollID);
-  if (poll == undefined) {
-    console.log('Error: poll not found in brain: '+pollID);
-  }
-  
-  poll.ended = true;
-  
-  poll.votes = [];
-  poll.votes['a3kgfm9g7l'] = 1;
-
-  poll.votes['sdsd34fds1'] = 1;
-  poll.votes['kjdl73fds2'] = 1;
-  poll.votes['fgdg5446sd'] = 0;
-
-  poll.results = {};
-  poll.results.voteCounts = []; 
-
-  if (poll.type === 'choice') {
-
-    let highestVotes = {choice:null,count:0,draw:false,letter:null};
-    Object.keys(pollCounts).forEach(function(element, key, _array) {
-      let letter = poll.letters[element];  
-      let pollChoice = poll.choices[element];
-      let voteCount = pollCounts[element];
-      if (voteCount >= highestVotes.count) {
-        highestVotes.choice = Number(element);
-        highestVotes.letter = letter;      
-        highestVotes.draw = false;
-        if (voteCount == highestVotes.count)
-          highestVotes.draw = true;
-        highestVotes.count = voteCount;
-      }
-      resultText += voteCount+' votes for '+letter+':'+pollChoice+'\n';    
-    });
-
-    if (highestVotes.draw === true)
-      resultText += 'Result: draw - no clear winner';
-    else 
-      resultText += 'Result: win - option '+highestVotes.letter+' with '+highestVotes.count+' votes';
-  }
-  else if (poll.type === 'proposal' || poll.type === 'prop') {
-
-    Object.keys(pollCounts).forEach(function(element, key, _array) {        
-      let pollChoice = poll.choices[element];
-      let voteCount = pollCounts[element];
-      resultText += voteCount+' votes for '+poll.letters[key]+':'+pollChoice+ '\n';    
-    });
-
-    let yesVotes = pollCounts[poll.letters.indexOf('Y')];
-    let noVotes = pollCounts[poll.letters.indexOf('N')];
-    if (yesVotes /2 >= noVotes)
-      resultText += 'Result: success - quorum reached for Y with '+yesVotes+' votes';  
-    else 
-      resultText += 'Result: failed - no quorum';      
-  }
-
-  announcePollEnd(robot,pollID);
-}
-
-function announcePollEnd(robot,pollID) {
-  
-  let poll = robot.brain.get(pollID);
-  if (poll == undefined) {
-    console.log('Error: poll not found in brain: '+pollID);
-  }
-
-  if (poll.votes == undefined) {
-    robot.send({room:'Shell'}, 'Poll failed, no votes cast');
-    return;
-  }
-  let pollCounts = {};
-  Object.keys(poll.votes).forEach(function(userID, key, _array) {      
-    let num = poll.votes[userID];
-    if (num !== undefined)
-      pollCounts[num] = pollCounts[num] ? pollCounts[num] + 1 : 1;
-  });
-  
-  let resultText = 'Poll #'+(poll.pollNum+1)+' complete!\n';
-  resultText += 'Vote Count:\n';
-
-  if (poll.type === 'choice') {
-
-    let highestVotes = {choice:null,count:0,draw:false,letter:null};
-    Object.keys(pollCounts).forEach(function(element, key, _array) {
-      let letter = poll.letters[element];  
-      let pollChoice = poll.choices[element];
-      let voteCount = pollCounts[element];
-      if (voteCount >= highestVotes.count) {
-        highestVotes.choice = Number(element);
-        highestVotes.letter = letter;      
-        highestVotes.draw = false;
-        if (voteCount == highestVotes.count)
-          highestVotes.draw = true;
-        highestVotes.count = voteCount;
-      }
-      resultText += voteCount+' votes for '+letter+':'+pollChoice+'\n';    
-    });
-
-    if (highestVotes.draw === true)
-      resultText += 'Result: draw - no clear winner';
-    else 
-      resultText += 'Result: win - option '+highestVotes.letter+' with '+highestVotes.count+' votes';
-  }
-  else if (poll.type === 'proposal' || poll.type === 'prop') {
-
-    Object.keys(pollCounts).forEach(function(element, key, _array) {        
-      let pollChoice = poll.choices[element];
-      let voteCount = pollCounts[element];
-      resultText += voteCount+' votes for '+poll.letters[key]+':'+pollChoice+ '\n';    
-    });
-
-    let yesVotes = pollCounts[poll.letters.indexOf('Y')];
-    let noVotes = pollCounts[poll.letters.indexOf('N')];
-    if (yesVotes /2 >= noVotes)
-      resultText += 'Result: success - quorum reached for Y with '+yesVotes+' votes';  
-    else 
-      resultText += 'Result: failed - no quorum';      
-  }
-
-  robot.send({room:'Shell'}, resultText);
-}
-
 module.exports = function(robot) {
   
+  function userHasRole(msg,role) {
+  
+    return true;
+  
+    robot.logger.info("Checking if user: "+msg.message.user.name+" has role "+role);
+    let user = robot.brain.userForName(msg.message.user.name);
+    if (!user) {
+      msg.reply(user.name + " does not exist");
+      return false;
+    }  
+    else if (!robot.auth.hasRole(user, role)) {
+      robot.logger.info("Permission Denied");
+      msg.reply("Access Denied. You need "+role+" role to perform this action.");
+      return false;
+    }
+    robot.logger.info("Permission Granted");
+    return true;
+  }
+  
+  function startPoll(pollID) {
+    announcePoll(pollID);
+  }
+  
+  function announcePoll(pollID) {
+  
+    let poll = robot.brain.get(pollID);
+    if (poll === undefined) {
+      console.log('Error: poll not found in brain: '+pollID);
+    }
+  
+    let pollMessage = 'Poll #'+(poll.pollNum+1)+' started!\n';
+    pollMessage += 'Title: '+poll.title + ' ('+poll.type.toUpperCase()+')\n';
+    pollMessage += 'Description: '+poll.description +'\n';
+    
+    for (let i=0; i<poll.numOptions; i++) {    
+      pollMessage += poll.letters[i]+'. '+poll.choices[i] +'\n';
+    }
+  
+    let pollAudience = [testUserID];//robot.auth.usersWithRole('poll');
+    for (let i=0; i<pollAudience.length; i++) {      
+      let targetUserID = pollAudience[i];
+      if (poll.votes && poll.votes[targetUserID] != undefined) {
+        pollMessage += 'You have previously voted on this poll.' +'\n';
+        pollMessage += 'You voted '+poll.letters[poll.votes[targetUserID]]+'\n';        
+      }
+      else {
+        pollMessage += 'You have not yet voted on this poll.' +'\n';
+      }    
+      
+      let end = Moment(poll.endTime);
+      pollMessage += 'Poll ends '+end.format('LL');      
+    
+      robot.send({user: targetUserID}, pollMessage);
+    }
+  }
+  
+  function endPoll(pollID) {
+    
+    let poll = robot.brain.get(pollID);
+
+    if (poll === undefined) {
+      console.log('Error: poll not found in brain: '+pollID);
+    }
+    
+    poll.ended = true;
+    
+    poll.votes = [];
+    poll.votes['a3kgfm9g7l'] = 1;
+    poll.votes['sdsd34fds1'] = 1;
+    poll.votes['kjdl73fds2'] = 1;
+    poll.votes['fgdg5446sd'] = 0;
+  
+    poll.results = {};
+    poll.results.votes = {};
+    poll.results.winner = {choice:null,count:0,letter:null};
+    poll.results.draw = [];
+  
+    let pollCounts = {};
+    Object.keys(poll.votes).forEach(function(userID, key, _array) {      
+      let num = poll.votes[userID];
+      if (num !== undefined)
+        pollCounts[num] = pollCounts[num] ? pollCounts[num] + 1 : 1;
+    });
+
+    if (poll.type === 'choice') {
+  
+      let highestVotes = {choice:null,count:0,draw:false,letter:null};
+      Object.keys(pollCounts).forEach(function(element, key, _array) {
+        let letter = poll.letters[element];  
+        let pollChoice = poll.choices[element];
+        let voteCount = pollCounts[element];
+        poll.results.votes[letter] = {choice:pollChoice,count:voteCount,letter:letter};
+
+        // highestVotes.choice = Number(element);
+        // highestVotes.letter = letter;      
+        // highestVotes.draw = false;
+
+        if (voteCount > poll.results.winner) {
+          poll.results.winner = Object.assign({},poll.results.votes[letter]);
+          poll.results.draw = [];
+        }
+        else if (voteCount === poll.results.winner) {
+          poll.results.draw.push(poll.results.votes[letter]);          
+          poll.results.draw.push(poll.results.votes[poll.results.winner.letter]);
+          poll.results.winner = null;
+        }
+          // highestVotes.choice = Number(element);
+          // highestVotes.letter = letter;      
+          // highestVotes.draw = false;
+          // if (voteCount === highestVotes.count) {
+          //   highestVotes.draw = true;
+          // }
+            
+          // highestVotes.count = voteCount;
+        //}          
+      });
+
+      Object.keys(poll.results.votes).forEach(function(key) {
+        //resultText += poll.results.votes[key].count+' votes for '+key+':'+poll.results.votes[key].choice+'\n';   
+        console.log(poll.results.votes[key].count+' votes for '+key+':'+poll.results.votes[key].choice+'\n');
+      });
+
+      // if (highestVotes.draw === true)
+      //   resultText += 'Result: draw - no clear winner';
+      // else 
+      //   resultText += 'Result: win - option '+highestVotes.letter+' with '+highestVotes.count+' votes';
+    }
+    else if (poll.type === 'proposal' || poll.type === 'prop') {
+  
+      Object.keys(pollCounts).forEach(function(element, key, _array) {        
+        let pollChoice = poll.choices[element];
+        let voteCount = pollCounts[element];
+        resultText += voteCount+' votes for '+poll.letters[key]+':'+pollChoice+ '\n';    
+      });
+  
+      let yesVotes = pollCounts[poll.letters.indexOf('Y')];
+      let noVotes = pollCounts[poll.letters.indexOf('N')];
+      if (yesVotes /2 >= noVotes)
+        resultText += 'Result: success - quorum reached for Y with '+yesVotes+' votes';  
+      else 
+        resultText += 'Result: failed - no quorum';      
+    }
+  
+    announcePollEnd(pollID);
+  }
+  
+  function announcePollEnd(pollID) {
+    
+    let poll = robot.brain.get(pollID);
+    if (poll === undefined) {
+      console.log('Error: poll not found in brain: '+pollID);
+    }
+  
+    if (poll.votes === undefined) {
+      robot.send({room:'Shell'}, 'Poll failed, no votes cast');
+      return;
+    }
+    let pollCounts = {};
+    Object.keys(poll.votes).forEach(function(userID, key, _array) {      
+      let num = poll.votes[userID];
+      if (num !== undefined)
+        pollCounts[num] = pollCounts[num] ? pollCounts[num] + 1 : 1;
+    });
+    
+    let resultText = 'Poll #'+(poll.pollNum+1)+' complete!\n';
+    resultText += 'Vote Count:\n';
+  
+    if (poll.type === 'choice') {
+  
+      let highestVotes = {choice:null,count:0,draw:false,letter:null};
+      Object.keys(pollCounts).forEach(function(element, key, _array) {
+        let letter = poll.letters[element];  
+        let pollChoice = poll.choices[element];
+        let voteCount = pollCounts[element];
+        if (voteCount >= highestVotes.count) {
+          highestVotes.choice = Number(element);
+          highestVotes.letter = letter;      
+          highestVotes.draw = false;
+          if (voteCount === highestVotes.count)
+            highestVotes.draw = true;
+          highestVotes.count = voteCount;
+        }
+        resultText += voteCount+' votes for '+letter+':'+pollChoice+'\n';    
+      });
+  
+      if (highestVotes.draw === true)
+        resultText += 'Result: draw - no clear winner';
+      else 
+        resultText += 'Result: win - option '+highestVotes.letter+' with '+highestVotes.count+' votes';
+    }
+    else if (poll.type === 'proposal' || poll.type === 'prop') {
+  
+      Object.keys(pollCounts).forEach(function(element, key, _array) {        
+        let pollChoice = poll.choices[element];
+        let voteCount = pollCounts[element];
+        resultText += voteCount+' votes for '+poll.letters[key]+':'+pollChoice+ '\n';    
+      });
+  
+      let yesVotes = pollCounts[poll.letters.indexOf('Y')];
+      let noVotes = pollCounts[poll.letters.indexOf('N')];
+      if (yesVotes /2 >= noVotes)
+        resultText += 'Result: success - quorum reached for Y with '+yesVotes+' votes';  
+      else 
+        resultText += 'Result: failed - no quorum';      
+    }
+  
+    robot.send({room:'Shell'}, resultText);
+  }
+
+
   var conversation = new DynamicConversation(robot);
   
   robot.respond(/start a poll/i, function(msg) {
 
-    if (!userHasRole(robot,msg,'core'))
+    if (!userHasRole(msg,'core'))
       return;
 
     robot.brain.data.users[testUserID] = robot.brain.data.users[msg.message.user.id];
@@ -355,7 +385,7 @@ module.exports = function(robot) {
         choices: []
       };
       if (pollData.type === 'choice') {
-        pollData.numOptions = dialogData.answers[pollNumOptionsPosition].response.value;
+        pollData.numOptions = Number(dialogData.answers[pollNumOptionsPosition].response.value);
         for (let i=0; i<pollData.numOptions; i++) {
           pollData.choices.push(dialogData.answers[pollChoicesPosition+i].response.value);
         }
@@ -369,7 +399,7 @@ module.exports = function(robot) {
         pollData.numOptions = 3;
       }
 
-      pollData.endTime = Moment().add(20,'minutes');
+      pollData.endTime = Moment().add(5,'seconds');
       let uuid = UuidV1();
       let key = 'poll:'+uuid;     
       pollData.pollID = key;
@@ -390,24 +420,24 @@ module.exports = function(robot) {
       }
       robot.brain.set('polls', pollList);
 
-      var sched = Schedule.scheduleJob(pollData.endTime.toDate(), function(robot,pollID){
-        endPoll(robot,pollID);
-      }.bind(null,robot,key));
+      var sched = Schedule.scheduleJob(pollData.endTime.toDate(), function(pollID){
+        endPoll(pollID);
+      }.bind(null,key));
 
       pollData.schedule = sched;
       robot.brain.set(key, pollData);
 
-      startPoll(robot, pollData.pollID);
+      startPoll(pollData.pollID);
     });
   });
 
   robot.respond(/vote ([a-zA-Z]) on poll ([1-9]{1,2})/i, function(msg) {
 
-    if (!userHasRole(robot,msg,'core'))
+    if (!userHasRole(msg,'core'))
       return;
 
     let pollList = robot.brain.get('polls');
-    if (pollList == undefined) {
+    if (pollList === undefined) {
       msg.reply('No polls underway.');
       return;
     }
@@ -458,11 +488,11 @@ module.exports = function(robot) {
 
   robot.respond(/change vote on poll ([1-9]{1,2}) to ([a-zA-Z])/i, function(msg) {
 
-    if (!userHasRole(robot,msg,'core'))
+    if (!userHasRole(msg,'core'))
       return;
 
     let pollList = robot.brain.get('polls');
-    if (pollList == undefined) {
+    if (pollList === undefined) {
       msg.reply('No polls underway.');
       return;
     }
@@ -495,14 +525,13 @@ module.exports = function(robot) {
 
   });
 
-
   robot.respond(/delegate vote on poll ([1-9]{1,2}) to ([A-Za-z][A-Za-z0-9._]{2,25})/i, function(msg) {
 
-    if (!userHasRole(robot,msg,'core'))
+    if (!userHasRole(msg,'core'))
       return;
 
     let pollList = robot.brain.get('polls');
-    if (pollList == undefined) {
+    if (pollList === undefined) {
       msg.reply('No polls underway.');
       return;
     }
@@ -537,7 +566,7 @@ module.exports = function(robot) {
 
   robot.respond(/list polls/i, function(msg) {
 
-    if (!userHasRole(robot,msg,'core'))
+    if (!userHasRole(msg,'core'))
       return;
 
     let pollList, poll;
@@ -557,7 +586,7 @@ module.exports = function(robot) {
 
   robot.respond(/list open polls/i, function(msg) {
 
-    if (!userHasRole(robot,msg,'core'))
+    if (!userHasRole(msg,'core'))
       return;
 
     let replyString = '';
@@ -572,7 +601,7 @@ module.exports = function(robot) {
     for (let i=0; i<pollList.length; i++) {
       var poll = robot.brain.get(pollList[i]);
       let end = Moment(poll.endTime);
-      if (end.isAfter(timeNow) && (!poll.votes || poll.votes[callerUserID] == undefined)) {          
+      if (end.isAfter(timeNow) && (!poll.votes || poll.votes[callerUserID] === undefined)) {          
         openPollList += (i+1) + '. ' + poll.title + '\n';
       }        
     } 
@@ -587,19 +616,18 @@ module.exports = function(robot) {
 
   robot.respond(/show poll ([1-9])/i, function(msg) {
 
-    let pollMessage = '';
     let callerUserID = msg.message.user.id;
 
-    if (!userHasRole(robot,msg,'core'))
+    if (!userHasRole(msg,'core'))
       return;
       
     let pollList = robot.brain.get('polls');
-    if (pollList == undefined) {
+    if (pollList === undefined) {
       msg.reply('No polls underway.');
       return;
     }
     let pollIndex = msg.match[1] - 1;
-    if (pollList[pollIndex] == undefined) {
+    if (pollList[pollIndex] === undefined) {
       msg.reply('No poll number '+msg.match[1]);
       return;
     }
@@ -611,15 +639,16 @@ module.exports = function(robot) {
 
     let replyString = 'Title: '+poll.title + ' ('+poll.type.toUpperCase()+')\n';
     replyString += 'Description: '+poll.description +'\n';
-      
+
     for (let i=0; i<poll.numOptions; i++) {    
-      pollMessage += poll.letters[i]+'. '+poll.choices[i] +'\n';
+      replyString  += poll.letters[i]+'. '+poll.choices[i] +'\n';
     }
     
     let now = Moment();
     let end = Moment(poll.endTime);
     if (now.isAfter(end)) {
       replyString += 'Poll has already ended'; 
+
     }        
     else {
       if (poll.votes && poll.votes[callerUserID] != undefined) {
