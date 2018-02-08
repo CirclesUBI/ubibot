@@ -6,7 +6,7 @@ const Schedule = require('node-schedule');
 
 const Moment = require('moment');
 
-const UuidV1 = require('uuid/v1');
+const Guid = require('guid');
 
 const pollTitlePosition = 0;
 const pollTypePosition = 1;
@@ -328,7 +328,7 @@ module.exports = function(robot) {
       ]
     };
     conversation.start(msg, pollConversationModel, function(err, msg, pollDialog) {
-      var guid, pollList;
+      var pollList;
       if (err != null) {
         return console.log("Error occured while creating poll: " + err);
       }
@@ -361,7 +361,7 @@ module.exports = function(robot) {
       }
 
       pollData.endTime = Moment().add(5,'seconds');
-      pollData.pollID = 'poll:'+UuidV1();     
+      pollData.pollID = 'poll:'+Guid.create();     
 
 
       let pollMessage = 'Poll Draft:\n';
