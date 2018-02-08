@@ -21,44 +21,37 @@ function userHasRole(robot,msg,role) {
 module.exports = function(robot) {
 
   // adds all users to robot brain, should only need to be done once in a bot's life
-  robot.respond(/add all users to brain/i, function(msg) {
+  robot.respond(/sync users with brain/i, function(msg) {
     
     if (!userHasRole(robot,msg,'admin'))
       return;
 
     var promise;
     promise = robot.adapter.callMethod('botRequest', 'allUsers');
-    return promise.then(function(result) {
-      console.log('allusers');
-      var users = [];
-      var user;      
-      if (result.length > 0) {        
-        for (var i=0; i<result.length; i++) {
-          user = robot.brain.userForId(result[i]._id, {
-            name: result[i].username,
-            alias: result[i].alias
-          });
-          user.room = 'ubibot';
-          user.roomID = 'K7JD72yvpgRBLfWri';
-          users.push(user);
+    return promise.then(function(rocketChatUsers) {
+      if (!rocketChatUsers)
+        return console.error('no rocketchat users!');      
+      var prevUsers = robot.brain.users();
+      var addedUsers = [];
+      var user;
+      for (var i=0; i<rocketChatUsers.length; i++) {
+        if (prevUsers[rocketChatUsers[i]._id]) {
+          console.log(rocketChatUsers[i]._id+': skip');
+          continue;
         }
-        msg.send(users.length+" Users add to brain");
-      } else {
-        msg.send("No users... \*cricket sound\*");
+        user = robot.brain.userForId(rocketChatUsers[i]._id, {
+          name: rocketChatUsers[i].username,
+          alias: rocketChatUsers[i].alias
+        });
+        user.room = 'ubibot';
+        user.roomID = 'K7JD72yvpgRBLfWri'; //this is the id of the ubibot room
+        console.log(rocketChatUsers[i]._id+': added');
+        addedUsers.push(user);
       }
+      msg.send(addedUsers.length+" Users added to brain");      
     }, function(error) {
         msg.send("Uh, sorry I don't know, something's not working");
     });
-  });
-
-  // warning!! this does not work properly
-  robot.respond(/remove all users from brain/i, function(msg) {
-    
-    if (!userHasRole(robot,msg,'admin'))
-      return;
-
-    robot.brain.data.users = [];
-    return msg.reply("Users wiped");
   });
 
   // list all users by name
