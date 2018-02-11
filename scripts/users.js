@@ -35,8 +35,7 @@ module.exports = function(robot) {
       var addedUsers = [];
       var user;
       for (var i=0; i<rocketChatUsers.length; i++) {
-        if (prevUsers[rocketChatUsers[i]._id]) {
-          console.log(rocketChatUsers[i]._id+': skip');
+        if (prevUsers[rocketChatUsers[i]._id]) {        
           continue;
         }
         user = robot.brain.userForId(rocketChatUsers[i]._id, {
@@ -44,8 +43,7 @@ module.exports = function(robot) {
           alias: rocketChatUsers[i].alias
         });
         user.room = 'ubibot';
-        user.roomID = 'K7JD72yvpgRBLfWri'; //this is the id of the ubibot room
-        console.log(rocketChatUsers[i]._id+': added');
+        user.roomID = 'esaWn95Srf5fyyrQG'; //this is the id of the ubibot room
         addedUsers.push(user);
       }
       msg.send(addedUsers.length+" Users added to brain");      
