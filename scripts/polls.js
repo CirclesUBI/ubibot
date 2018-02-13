@@ -18,7 +18,61 @@ const pollProposalPosition = 4;
 
 const pollingRoomName = 'polling-internal';
 
-//const testUserID = 'a3kgfm9g7l';
+const confirmConversationModel = {
+  abortKeyword: "quit",
+  onAbortMessage: "You have cancelled this conversation.",  
+  conversation: [
+    {
+      question: "Are you sure?",
+      answer: {
+        type: "choice",
+        options: [
+          {
+            match: "Y",
+            valid: true,
+            response: "OK, confirmed.",
+            value: "Y"
+          }, {
+            match: "y",
+            valid: true,
+            response: "OK, confirmed.",
+            value: "Y"
+          },{
+            match: "N",
+            valid: true,
+            response: "Abort.",
+            value: "N"
+          }, {
+            match: "n",
+            valid: true,
+            response: "Abort.",
+            value: "N"
+          }
+        ]
+      },
+      required: true,
+      error: "Sorry, I didn't understand your response. Please say [Y] or [N]"      
+    }
+  ]
+};
+
+//const testUserId = 'a3kgfm9g7l';
+
+// let coreusers = [
+//   'ZsuLNtEip9g98EYER',
+//   'Xwgmz977BntmXXP3e',
+//   'iKjDSNBqdFMvxCT48',
+//   'zgfuB2P5P2ErF6Nyr',
+//   'GhfX7a7CukJbw2Z72',
+//   'fuqTJHzTda7yGwZS4',
+//   'neAerNQBFenMNibqa',
+//   '6z8y4HR4oKMXLt3Yz',
+//   '4yaDDNKCtSCGwGysW',
+//   'YgdcjWc2MWkwfFoDs',
+//   'bTtftsEqgtKLWLeGQ',
+//   'eAocL4XvXSvGqSA5q',
+//   'sZdrn4uSiL6yCW3e2'
+// ];
 
 module.exports = function(robot) {
   
@@ -42,15 +96,15 @@ module.exports = function(robot) {
     return true;
   }
   
-  function startPoll(pollID) {
-    announcePoll(pollID);
+  function startPoll(pollId) {
+    announcePoll(pollId);
   }
   
-  function announcePoll(pollID) {
+  function announcePoll(pollId) {
   
-    let poll = robot.brain.get(pollID);
+    let poll = robot.brain.get(pollId);
     if (poll === undefined) {
-      console.log('Error: poll not found in brain: '+pollID);
+      console.log('Error: poll not found in brain: '+pollId);
     }
   
     let pollMessage = '*Poll #'+(poll.pollNum)+' started!*\n';
@@ -63,76 +117,136 @@ module.exports = function(robot) {
     let end = Moment(poll.endTime);
     pollMessage += 'Poll ends '+end.format('LL');  
 
-    robot.send({room:pollingRoomName},pollMessage);
-
-    let pollParticipants = robot.auth.usersWithRole('core'); //[testUserID];
-    console.log('sending poll announce to:'+pollParticipants);
+    let pollParticipants = poll.participants; //[testUserId];
+    console.log('sending poll '+poll.pollNum+' announce to:'+pollParticipants);
     for (let i=0; i<pollParticipants.length; i++) {      
-      let targetUserName = pollParticipants[i];
-      let targetUser = robot.brain.userForName(targetUserName);      
-              
+      let targetUser = robot.brain.userForName(pollParticipants[i]);                    
       robot.adapter.sendDirect({user:targetUser}, pollMessage);
     }
+
+    robot.send({room:pollingRoomName},pollMessage);
   }
   
-  function endPoll(pollID) {
+  function endPoll(pollId) {
     
-    let poll = robot.brain.get(pollID);
+    let poll = robot.brain.get(pollId);
 
     if (poll === undefined) {
-      console.log('Error: poll not found in brain: '+pollID);
+      console.log('Error: poll not found in brain: '+pollId);
     }
-    
-    poll.ended = true;
+
         
-    poll.votes = [];
-    poll.votes['sZdrn4uSiL6yCW3e2'] = 1;
-    poll.votes['ZsuLNtEip9g98EYER'] = 1;
-    poll.votes['Xwgmz977BntmXXP3e'] = 0;
-    poll.votes['iKjDSNBqdFMvxCT48'] = 0;
-    poll.votes['zgfuB2P5P2ErF6Nyr'] = 2;
-    poll.votes['GhfX7a7CukJbw2Z72'] = 2;
-    poll.votes['fuqTJHzTda7yGwZS4'] = 1;
-    poll.votes['neAerNQBFenMNibqa'] = 1;
-    poll.votes['6z8y4HR4oKMXLt3Yz'] = 1;
-    poll.votes['YgdcjWc2MWkwfFoDs'] = 2;
+    // poll.votes = [];
+    // poll.votes['sZdrn4uSiL6yCW3e2'] = 1;
+    // poll.votes['ZsuLNtEip9g98EYER'] = 1;
+    // poll.votes['Xwgmz977BntmXXP3e'] = 'neAerNQBFenMNibqa';
+    // poll.votes['iKjDSNBqdFMvxCT48'] = 1;
+    // poll.votes['zgfuB2P5P2ErF6Nyr'] = '6z8y4HR4oKMXLt3Yz';
+    // poll.votes['GhfX7a7CukJbw2Z72'] = 2;
+    // poll.votes['fuqTJHzTda7yGwZS4'] = '6z8y4HR4oKMXLt3Yz';
+    // poll.votes['neAerNQBFenMNibqa'] = 1;
+    // poll.votes['6z8y4HR4oKMXLt3Yz'] = 'fuqTJ6hTda7yGwZS4';
+    // poll.votes['YgdcjWc2MWkwfFoDs'] = 'iKjDSNBqdFMvxCT48';
   
-  
-  let coreusers = [
-    'ZsuLNtEip9g98EYER',
-    'Xwgmz977BntmXXP3e',
-    'iKjDSNBqdFMvxCT48',
-    'zgfuB2P5P2ErF6Nyr',
-    'GhfX7a7CukJbw2Z72',
-    'fuqTJHzTda7yGwZS4',
-    'neAerNQBFenMNibqa',
-    '6z8y4HR4oKMXLt3Yz',
-    '4yaDDNKCtSCGwGysW',
-    'YgdcjWc2MWkwfFoDs',
-    'bTtftsEqgtKLWLeGQ',
-    'eAocL4XvXSvGqSA5q',
-    'sZdrn4uSiL6yCW3e2'
-  ];
-
-
 
     poll.results = {};
     poll.results.votes = {};
+    poll.results.votes['A'] =  {choice:'Absent',count:0,letter:'A'};
     poll.results.winner = {choice:null,count:0,letter:null};
-    poll.results.draw = [];
+    poll.results.draw = {};
 
     if (poll.votes !== undefined) {            
   
+
+      Object.keys(poll.votes).forEach(function(userId) {      
+        let vote = poll.votes[userId];          
+        if (isNaN(vote)) {
+          let dUserId = vote;          
+          if (isCircularDelegation(dUserId,undefined,poll.votes)) {
+            if (!poll.circDelegates)
+              poll.circDelegates = [userId];
+            else 
+              poll.circDelegates.push(userId);            
+          }
+          else {
+            let nextPassRequired;
+            do {         
+              nextPassRequired = false;        
+              // if the delegatee hasn't voted then it's counted absent      
+              if (!poll.votes[dUserId])  {
+                if (!poll.absentDelegates)
+                  poll.absentDelegates = [userId];
+                else 
+                  poll.absentDelegates.push(userId);                 
+              }
+              else {
+                let dUserVote = poll.votes[dUserId];
+                if (isNaN(dUserVote)) {
+                  dUserId = dUserVote;
+                  nextPassRequired = true;
+                  return;
+                }
+                poll.votes[userId] = dUserVote;
+                let user = robot.brain.userForId(userId);
+                let p = user.polls[poll.pollId];
+                p.origVote = p.vote;
+                p.vote = dUserVote;
+                p.status = 'Delegated';                
+              }
+            }
+            while (nextPassRequired === true);  
+          }
+        }
+      });
+
+      for (let i in poll.circDelegates) {
+        let userId = poll.circDelegates[i];
+        let user = robot.brain.userForId(userId);
+        let p = user.polls[poll.pollId];
+        p.origVote = p.vote;
+        p.vote = 'A';
+        p.status = 'Circular Delegation';
+        poll.results.votes['A'].count++;
+        //delete poll.votes[userId];              
+      }
+      for (let i in poll.absentDelegates) {
+        let userId = poll.absentDelegates[i];
+        let user = robot.brain.userForId(userId);
+        let p = user.polls[poll.pollId];
+        p.origVote = p.vote;
+        p.vote = 'A';
+        p.status = 'Delegate Absent';
+        poll.results.votes['A'].count++;
+        //delete poll.votes[userId];              
+      }        
+
       let pollCounts = {};
-      Object.keys(poll.votes).forEach(function(userID, key, _array) {      
-        let num = poll.votes[userID];
+      Object.keys(poll.votes).forEach(function(userId, key, _array) {      
+        let num = poll.votes[userId];
         if (num !== undefined)
           pollCounts[num] = pollCounts[num] ? pollCounts[num] + 1 : 1;
       });
 
-      if (poll.type === 'choice') {
-    
-        let highestVotes = {choice:null,count:0,draw:false,letter:null};
+      let nonVoters = poll.participants.slice();
+          
+      for (const userName of Object.keys(poll.votes)) {
+        let i = nonVoters.indexOf(userName);        
+        nonVoters.splice(i,1);
+      }
+
+      for (let i=0;i<nonVoters.length;i++) {
+        let username = nonVoters[i];
+        let user = robot.brain.userForName(username);
+        if (!user.polls)
+          user.polls = {};
+        user.polls[poll.pollId] = {          
+          vote: 'A',
+          status:'Absence'          
+        };        
+      }               
+      poll.results.votes['A'].count += nonVoters.length;
+      
+      if (poll.type === 'choice') {        
         
         for (let i=0;i<poll.numOptions;i++) {          
           let letter = poll.letters[i];
@@ -142,14 +256,35 @@ module.exports = function(robot) {
         
           if (voteCount > poll.results.winner.count) {
             poll.results.winner = Object.assign({},poll.results.votes[letter]);
-            poll.results.draw = [];
+            poll.results.draw = {};
           }
           else if (voteCount === poll.results.winner.count) {
-            poll.results.draw.push(poll.results.votes[letter]);          
-            poll.results.draw.push(poll.results.votes[poll.results.winner.letter]);
+            poll.results.draw[letter] = poll.results.votes[letter];
+            if (poll.results.winner.choice !== null)
+              poll.results.draw[poll.results.winner.letter] = poll.results.winner;
             poll.results.winner = {choice:null,count:0,letter:null};
           }
-        }        
+        }
+        
+        if (poll.scope === 'full' || poll.results.winner.count > 0) {
+          poll.closed = true;
+          poll.status = 'complete';
+        }
+        else {
+          let now = Moment();
+          if (poll.endTime.isAfter(now)) {
+            poll.closed = true;
+            poll.status = 'ended without clear choice';
+          }
+          else {
+            //set to endPoll() at the original endtime. this will be interrupted by any votes cast
+            var sched = Schedule.scheduleJob(pollData.endTime.toDate(), function(pollId){
+              endPoll(pollId);
+            }.bind(null,pollData.pollId));
+            poll.closed = false;
+            poll.status = 'ongoing';
+          }
+        }
       }
       else if (poll.type === 'proposal' || poll.type === 'prop') {            
         
@@ -160,84 +295,92 @@ module.exports = function(robot) {
           poll.results.votes[letter] = {choice:pollChoice,count:voteCount,letter:letter};
         }        
 
-        if(poll.scope === 'full') {
-          let nonVoters = coreusers;
-          
-          for (const userID of Object.keys(poll.votes)) {
-            let i = nonVoters.indexOf(userID);
-            nonVoters.splice(i,1);
-          }
-          for (let i=0;i<nonVoters.length;i++) {
-            let u = nonVoters[i];
-            poll.votes[u] = 3;
-          }
-          if (nonVoters.length > 0) 
-            poll.results.votes['A'] =  {choice:'Absent',count:nonVoters.length,letter:'A'};
-
-        }
-
         let yesVotes = poll.results.votes['Y'].count;
-        let noVotes = poll.results.votes['N'].count + poll.results.votes['A'].count;
-        if (yesVotes /2 >= noVotes) {
+        let noVotes = (poll.scope === 'full')  ? poll.results.votes['N'].count + poll.results.votes['A'].count : poll.results.votes['N'].count;
+        if (yesVotes >= 2 && yesVotes /2 >= noVotes) {
           poll.results.winner = poll.results.votes['Y'];
+          poll.closed = true;
+          poll.status = (poll.scope === 'full') ? 'complete': 'quorum reached early';
         }
-        else {                    
-          poll.results.winner = {choice:'No or Absent',count:noVotes,letter:'NA'};
+        else {
+          if (poll.scope === 'full') {
+            poll.results.winner = {choice:'No or Absent',count:noVotes,letter:'NA'};
+            poll.closed = true;
+            poll.status = 'complete';
+          }
+          else {  
+            poll.results.winner = poll.results.votes['N'];
+            let now = Moment();
+            if (poll.endTime.isAfter(now)) {
+              poll.closed = true;
+              poll.status = 'ended without quorum';
+            }
+            else {
+              //set to endPoll() at the original endtime. this will be interrupted by any votes cast
+              var sched = Schedule.scheduleJob(pollData.endTime.toDate(), function(pollId){
+                endPoll(pollId);
+              }.bind(null,pollData.pollId));
+              poll.closed = false;
+              poll.status = 'ongoing';
+            }
+          }
         }
       }
     }
-  
-    announcePollEnd(pollID);
+    else {
+      poll.results.winner = {choice:'No Votes Cast',count:0,letter:'NV'};
+      poll.closed = true;
+      poll.status = 'not enough voters';
+    }
+    
+    robot.brain.save();
+    announcePollEnd(pollId);
   }
   
-  function announcePollEnd(pollID) {
+  function announcePollEnd(pollId) {
     
-    let poll = robot.brain.get(pollID);
+    let poll = robot.brain.get(pollId);
     if (poll === undefined) {
-      console.log('Error: poll not found in brain: '+pollID);
+      console.log('Error: poll not found in brain: '+pollId);
       return;
     }
-
-    console.log(poll.results); 
   
     let resultText = '*Poll #'+(poll.pollNum)+' complete!*\n';
 
     if (poll.votes === undefined) {
-      resultText += 'Poll failed, no votes cast';
-      robot.send({room:pollingRoomName},resultText);
-      return;
-    }    
+      resultText += 'Poll FAILED, no votes cast';      
+    } 
+    else {   
     
-    resultText += 'Vote Count:\n';
- 
-    for (let i=0;i<poll.numOptions;i++) {    
-      let letter = poll.letters[i];      
-      resultText += poll.results.votes[letter].count+' votes for '+letter+': '+poll.results.votes[letter].choice+'\n';
-    }
-    if (poll.results.votes['A'])
-      resultText += poll.results.votes['A'].count+' votes marked A: Absent\n';
-
-    if (poll.type === 'choice') {       
-      if (poll.results.draw.length > 0)
-        resultText += 'Result: DRAW - no clear winner';
-      else 
-        resultText += 'Result: WIN - option '+poll.results.winner.letter+' with '+poll.results.winner.count+' votes';
-    }
-    else if (poll.type === 'proposal' || poll.type === 'prop') {
-      if (poll.results.winner.letter === 'Y') {
-        resultText += 'Result: PASSED - quorum reached for Y with '+poll.results.winner.count+' votes';  
+      resultText += 'Vote Tally:\n';
+  
+      for (let i=0;i<poll.numOptions;i++) {    
+        let letter = poll.letters[i];      
+        resultText += poll.results.votes[letter].count+' votes for '+letter+': '+poll.results.votes[letter].choice+'\n';
       }
-      else {
-        resultText += 'Result: FAILED - no quorum with '+poll.results.winner.count+' votes for:'+poll.results.winner.choice;
+      if (poll.results.votes['A'])
+        resultText += poll.results.votes['A'].count+' votes marked A: Absent\n';
+
+      if (poll.type === 'choice') {       
+        if (poll.results.draw.length > 0)
+          resultText += 'Result: DRAW - no clear winner';
+        else 
+          resultText += 'Result: WIN - option '+poll.results.winner.letter+' with '+poll.results.winner.count+' votes';
+      }
+      else if (poll.type === 'proposal' || poll.type === 'prop') {
+        if (poll.results.winner.letter === 'Y') {
+          resultText += 'Result: PASSED - quorum reached for Y with '+poll.results.winner.count+' votes';  
+        }
+        else {
+          resultText += 'Result: FAILED - no quorum with '+poll.results.winner.count+' votes for:'+poll.results.winner.choice;
+        }
       }
     }
   
-    let pollParticipants = robot.auth.usersWithRole('core'); 
-    console.log('sending poll end announce to:'+pollParticipants);
+    let pollParticipants = poll.participants;
+    console.log('sending poll '+poll.pollNum+' end to:'+pollParticipants);
     for (let i=0; i<pollParticipants.length; i++) {      
-      let targetUserName = pollParticipants[i];
-      let targetUser = robot.brain.userForName(targetUserName);      
-      let end = Moment(poll.endTime);        
+      let targetUser = robot.brain.userForName(pollParticipants[i]);                    
       robot.adapter.sendDirect({user:targetUser}, resultText);
     }
     
@@ -248,26 +391,28 @@ module.exports = function(robot) {
     return string[0].toUpperCase() + string.slice(1);
   }
 
-  var conversation = new DynamicConversation(robot);
-  
+  function isCircularDelegation(userId,parents,votes) {    
+    parents = parents || [];
+    let vote = votes[userId];
+    //delegatee is missing or has a vote thats not a delegation. fine.  
+    if (!vote || !isNaN(vote))
+      return false;
 
-  // robot.respond(/msg test/i, function(msg) {
-    
-  //   //todo: figure out what the difference is between this 'user' and the one at poll announce
-  //   let targetUser = robot.brain.userForName('edzillion');
-  //   console.log(targetUser);
-  //   //robot.adapter.sendDirect(targetUser, 'hey senddirect');
-  //   robot.adapter.sendDirect({user:targetUser}, 'hey send direct to user');
-  // });
+    if (parents.indexOf(userId) >= 0) {      
+      return true;
+    }      
+
+    parents.push(vote);
+    return isCircularDelegation(vote,parents,votes);
+  }
+
+  var conversation = new DynamicConversation(robot);
+
 
   robot.respond(/start a poll/i, function(msg) {
 
     if (!userHasRole(msg,'core'))
       return;
-
-    // robot.brain.data.users[testUserID] = robot.brain.data.users[msg.message.user.id];
-    // robot.brain.data.users[testUserID].id = testUserID;
-    // robot.brain.save();
 
     var pollConversationModel, pollConfirmConversationModel, dialog;
     msg.reply("Sure, just answer the following questions.");
@@ -285,7 +430,7 @@ module.exports = function(robot) {
           error: "Sorry your response didn't contain any text, please name the poll."
         }, 
         {
-          question: "What kind of poll is it (choice/proposal)?",
+          question: "What kind of poll is it [choice]/[proposal]?",
           answer: {
             type: "choice",
             options: [
@@ -308,10 +453,10 @@ module.exports = function(robot) {
             ]
           },
           required: true,
-          error: "Sorry, I didn't understand your response. Please say 'choice', 'proposal' or 'prop' to proceed."
+          error: "Sorry, I didn't understand your response. Please say [choice], [proposal] or [prop] to proceed."
         }, 
         {
-          question: "Who will take part in the poll (full/partial)?",
+          question: "Who will take part in the poll [full]/[partial]?",
           answer: {
             type: "choice",
             options: [
@@ -334,7 +479,7 @@ module.exports = function(robot) {
             ]
           },
           required: true,
-          error: "Sorry, I didn't understand your response. Please say 'full', 'partial' or 'part' to proceed."
+          error: "Sorry, I didn't understand your response. Please say [full], [partial] or [part] to proceed."
         }, 
         {
           question: "Please describe the poll you are running:",
@@ -354,7 +499,7 @@ module.exports = function(robot) {
                 type: "series"
               },
               required: true,
-              error: "Sorry you need to input a number from 2 to 9."
+              error: "Sorry you need to input a number from [2] to [9]."
             }
           ],
           proposal: [
@@ -397,7 +542,7 @@ module.exports = function(robot) {
       ]
     };
     conversation.start(msg, pollConversationModel, function(err, msg, pollDialog) {
-      var pollList;
+      var pollList = robot.brain.get('polls');      
       if (err != null) {
         return console.log("Error occured while creating poll: " + err);
       }
@@ -411,7 +556,12 @@ module.exports = function(robot) {
         scope: dialogData.answers[pollScopePosition].response.value,
         letters: null,
         numOptions: null,
-        choices: [] 
+        choices: [],
+        participants: robot.auth.usersWithRole('core'),
+        votes: {},
+        proposer:msg.message.user.id,
+        ended: false,
+        status: 'active'
       };
       if (pollData.type === 'choice') {
         pollData.numOptions = Number(dialogData.answers[pollNumOptionsPosition].response.value);
@@ -429,11 +579,11 @@ module.exports = function(robot) {
         pollData.numOptions = 3;
       }
 
-      pollData.endTime = Moment().add(25,'seconds');
-      pollData.pollID = 'poll:'+Guid.create();     
+      pollData.endTime = Moment().add(1,'minute');
+      pollData.pollId = 'poll:'+Guid.create();     
 
-
-      let pollMessage = 'Poll Draft:\n';
+      let draftPollNum = (pollList) ? pollList.length : 0;
+      let pollMessage = 'Poll #'+draftPollNum+' - draft:\n';
       pollMessage += 'Title: '+pollData.title + ' ('+pollData.type.toUpperCase()+')\n';
       pollMessage += 'Description: '+pollData.description +'\n';
       
@@ -442,7 +592,7 @@ module.exports = function(robot) {
       }
          
       let end = Moment(pollData.endTime);
-      pollMessage += 'Poll ends '+end.format('LL');      
+      pollMessage += 'Poll ends '+end.fromNow();
       
       msg.reply(pollMessage);
 
@@ -482,7 +632,7 @@ module.exports = function(robot) {
               ]
             },
             required: true,
-            error: "Sorry, I didn't understand your response. Please say 'Y' or 'N'"
+            error: "Sorry, I didn't understand your response. Please say [Y] or [N]"
           }              
         ]
       };
@@ -492,31 +642,31 @@ module.exports = function(robot) {
         let dialogData = confirmDialog.fetch();
         let answer = dialogData.answers[0].response.value.toUpperCase();
         if (answer === 'Y') {
-          var user = robot.brain.data.users[msg.message.user.id];
+          var user = robot.brain.userForId(msg.message.user.id);
           if (!user.polls) {
-            user.polls = [];        
+            user.polls = {};        
           }
-          user.polls[pollData.pollID] = {vote:null};
-
-          pollList = robot.brain.get('polls');
+          user.polls[pollData.pollId] = null;
+          
           if (!pollList) {
-            pollList = [pollData.pollID]; 
+            pollList = [pollData.pollId]; 
             pollData.pollNum = 0;       
           }
           else {
-            pollList.push(pollData.pollID);
+            pollList.push(pollData.pollId);
             pollData.pollNum = pollList.length-1;
           }
           robot.brain.set('polls', pollList);
 
-          var sched = Schedule.scheduleJob(pollData.endTime.toDate(), function(pollID){
-            endPoll(pollID);
-          }.bind(null,pollData.pollID));
+          var sched = Schedule.scheduleJob(pollData.endTime.toDate(), function(pollId){
+            endPoll(pollId);
+          }.bind(null,pollData.pollId));
 
+          pollData.startTime = Moment();
           pollData.schedule = sched;
-          robot.brain.set(pollData.pollID, pollData);
-
-          startPoll(pollData.pollID);
+          robot.brain.set(pollData.pollId, pollData);
+          console.log(pollData);
+          startPoll(pollData.pollId);
         }
         else {
           msg.reply('Poll deleted.');
@@ -527,6 +677,45 @@ module.exports = function(robot) {
   });
 
   robot.respond(/cancel poll ([0-9]{1,2})/i, function(msg) {
+
+    if (!userHasRole(msg,'core'))
+      return;
+    
+    
+    let pollList = robot.brain.get('polls');
+    if (pollList === undefined) {
+      msg.reply('No polls underway.');
+      return;
+    }     
+
+    let pollIndex = msg.match[1];
+    let poll = robot.brain.get(pollList[pollIndex]);    
+    let callerUser = robot.brain.userForId(msg.message.user.id);
+
+    if (!poll) {
+      msg.reply('No poll number '+msg.match[2]);
+      return;
+    }
+    else if (poll.closed) {
+      msg.reply('Poll '+poll.pollNum+' closed. Status: '+poll.status);
+      return;
+    }
+
+    if (poll.proposer === callerUser.id) {
+      conversation.start(msg, confirmConversationModel, function(err, msg, confirmDialog) {
+        let dialogData = confirmDialog.fetch();
+        let answer = dialogData.answers[0].response.value.toUpperCase();
+        if (answer === 'Y') {          
+          poll.closed = true;
+          poll.status = 'cancelled';
+          poll.schedule.cancel();    
+          msg.reply('Poll '+poll.pollNum+' closed. Status: '+poll.status);      
+        }
+      });
+    }
+    else 
+      msg.reply('Poll '+poll.pollNum+' is not yours to cancel');
+
   });
 
   robot.respond(/vote ([a-zA-Z]) on poll ([0-9]{1,2})/i, function(msg) {
@@ -542,49 +731,49 @@ module.exports = function(robot) {
     let vote = msg.match[1].toUpperCase();
     let pollIndex = msg.match[2];
     let poll = robot.brain.get(pollList[pollIndex]);    
-    let callerUserID = msg.message.user.id;
+    let callerUser = robot.brain.userForId(msg.message.user.id);
 
     if (!poll) {
       msg.reply('No poll number '+msg.match[2]);
       return;
     }
-    else if (poll.votes && poll.votes[callerUserID] != undefined) {
+    else if (poll.closed) {
+      msg.reply('Poll '+poll.pollNum+' closed. Status: '+poll.status);
+      return;
+    }
+    if (!poll.votes) 
+      poll.votes = {};
+    else if (poll.votes[callerUser.id]) {
       //already voted
-      msg.reply('You have already voted on this poll');
-      msg.reply("Use command 'change vote on poll 1 to a' to change your vote");
+      msg.reply('You have already voted on this poll\n'+"Use command 'change vote on poll [1] to [A]' to change your vote");
       return;
     }
 
     let voteIndex = poll.letters.indexOf(vote);
     let voteText = poll.choices[voteIndex];
 
-
     if (voteIndex < 0 || voteIndex >= poll.numOptions ) {
       msg.reply('No poll option '+vote);
       return;
     }
-    if (!poll.votes) 
-        poll.votes = [];
 
-    console.log()
-    poll.votes[callerUserID] = vote; 
     msg.reply('You have voted '+vote+':'+voteText+ ' on poll '+msg.match[2]+':'+poll.title);
-    if (!poll.votes)
-        poll.votes = [];
-    poll.votes[String(callerUserID)] = voteIndex;
-    if (!robot.brain.data.users[callerUserID].polls)
-      robot.brain.data.users[callerUserID].polls = [];
-    robot.brain.data.users[callerUserID].polls[poll.pollID] = {'vote':voteIndex};
+    poll.votes[callerUser.id] = voteIndex;
 
-    let pollParticipants = poll.scope;
-    if (pollParticipants === 'partial' || pollParticipants === 'part') {
-      let newEndDate = Moment().add(10,'minutes').toDate();
+    if (!callerUser.polls)
+      callerUser.polls = {};
+    
+    callerUser.polls[poll.pollId] = {vote:voteIndex};
+    if (poll.scope === 'partial' || poll.scope === 'part') {
+      
+      let newEndDate = Moment().add(30,'seconds').toDate();
       let success = poll.schedule.reschedule(newEndDate);
       if (success)
-        msg.reply('Poll #'+poll.pollNum+' is extended by 20 seconds');
+        msg.reply('Poll #'+poll.pollNum+' is extended by 30 seconds');
       else 
         msg.reply('Problem extending Poll #'+poll.pollNum);
     }
+    robot.brain.set(poll.pollId, poll);
     robot.brain.save();
   });
 
@@ -601,14 +790,18 @@ module.exports = function(robot) {
     let vote = msg.match[2].toUpperCase();
     let pollIndex = msg.match[1];
     let voteIndex = vote.charCodeAt(0) - 'A'.charCodeAt(0);
-    let callerUserID = msg.message.user.id;
+    let callerUser = robot.brain.userForId(msg.message.user.id);
     let poll = robot.brain.get(pollList[pollIndex]);
 
     if (!poll) {
       msg.reply('No poll number '+msg.match[1]);
       return;
+    }    
+    else if (poll.closed) {
+      msg.reply('Poll '+poll.pollNum+' closed. Status: '+poll.status);
+      return;
     }
-    else if (!poll.votes[callerUserID]) {
+    if (!poll.votes || !poll.votes[callerUser.id]) {
       //not already voted
       msg.reply('No vote to change. You have never voted on this poll');      
       return;
@@ -618,13 +811,12 @@ module.exports = function(robot) {
       msg.reply('No poll option '+vote);
       return;
     }
-    poll.votes[callerUserID] = voteIndex; 
-
-    robot.brain.data.users[callerUserID].polls[poll.pollID].vote = voteIndex;
+    poll.votes[callerUser.id] = voteIndex; 
+    callerUser.polls[poll.pollId].vote = {vote:voteIndex};
+    robot.brain.set(poll.pollId, poll);
     robot.brain.save();
 
     msg.reply('Changed vote to '+vote+': '+poll.choices[voteIndex]+ ' on poll '+pollIndex+':'+poll.title);
-
   });
 
   robot.respond(/delegate vote on poll ([0-9]{1,2}) to ([A-Za-z][A-Za-z0-9._]{2,25})/i, function(msg) {
@@ -638,34 +830,90 @@ module.exports = function(robot) {
       return;
     }
     let delegateUsername = msg.match[2];
-    let user  = robot.brain.usersForFuzzyName(delegateUsername);
+    let dUser  = robot.brain.userForName(delegateUsername);
 
-    if (user === undefined) {
+    if (dUser === undefined) {
       msg.reply('No username: '+delegateUsername+'. Have you spelled it correctly?');
       return;
     }
 
     let pollIndex = msg.match[1];
-    let callerUserID = msg.message.user.id;
+    let callerUser = robot.brain.userForId(msg.message.user.id);
     let poll = robot.brain.get(pollList[pollIndex]);
 
     if (!poll) {
       msg.reply('No poll number '+msg.match[1]);
       return;
     }
-    else if (poll.votes[callerUserID]) {
+    else if (poll.closed) {
+      msg.reply('Poll '+poll.pollNum+' closed. Status: '+poll.status);
+      return;
+    }
+    if (!poll.votes) 
+      poll.votes = [];
+    else if (poll.votes[callerUser.id]) {
       //already voted
-      msg.reply('You have already voted on this poll');      
+      msg.reply('You have already voted on this poll\n'+"Use command 'change delegate vote on poll [1] to [username]' to change your vote"); 
+      return;
+    }
+
+    poll.votes[callerUser.id] = dUser.id;
+
+    if (!callerUser.polls)
+      callerUser.polls = {};
+    
+    callerUser.polls[poll.pollId] = {vote:dUser.id};
+    robot.brain.set(poll.pollId, poll);
+    robot.brain.save();
+
+    msg.reply('Delegated vote to '+delegateUsername+' on poll '+pollIndex+':'+poll.title);
+  });
+
+  robot.respond(/change delegate vote on poll ([0-9]{1,2}) to ([A-Za-z][A-Za-z0-9._]{2,25})/i, function(msg) {
+
+    if (!userHasRole(msg,'core'))
+    return;
+
+    let pollList = robot.brain.get('polls');
+    if (pollList === undefined) {
+      msg.reply('No polls underway.');
+      return;
+    }
+    let delegateUsername = msg.match[2];
+    let dUser  = robot.brain.userForName(delegateUsername);
+    
+    if (dUser === undefined) {
+      msg.reply('No username: '+delegateUsername+'. Have you spelled it correctly?');
+      return;
+    }
+
+    let pollIndex = msg.match[1];
+    let callerUser = robot.brain.userForId(msg.message.user.id);
+    let poll = robot.brain.get(pollList[pollIndex]);
+
+    if (!poll) {
+      msg.reply('No poll number '+msg.match[1]);
+      return;
+    }
+    else if (poll.closed) {
+      msg.reply('Poll '+poll.pollNum+' closed. Status: '+poll.status);
+      return;
+    }
+    if (!poll.votes || !poll.votes[callerUser.id]) {
+      //not already voted
+      msg.reply('No vote to change. You have never voted on this poll');      
       return;
     }
     
-    poll.votes[callerUserID] = 'delegate:'+userToDelegateTo;
-    if (!robot.brain.data.users[callerUserID].polls)
-      robot.brain.data.users[callerUserID].polls = [];
-    robot.brain.data.users[callerUserID].polls[poll.pollID] = {'vote':'delegate:'+userToDelegateTo};
+    poll.votes[callerUser.id] = dUser.id;
+
+    if (!callerUser.polls)
+      callerUser.polls = {};
+    callerUser.polls[poll.pollId] = {vote:dUser.id};
+    robot.brain.set(poll.pollId, poll);
     robot.brain.save();
 
-    msg.reply('Delegated vote to '+userToDelegateTo+' on poll '+pollIndex+':'+poll.title);
+    msg.reply('Changed vote to delegate to '+delegateUsername+' on poll '+pollIndex+':'+poll.title);
   });
 
   robot.respond(/list polls/i, function(msg) {
@@ -694,8 +942,7 @@ module.exports = function(robot) {
       return;
 
     let replyString = '';
-    let callerUserID = msg.message.user.id;
-    let timeNow = Moment();
+    let callerUserId = msg.message.user.id;
     var pollList = robot.brain.get('polls');          
     if (!pollList) {
         msg.reply('No polls underway.');
@@ -703,9 +950,8 @@ module.exports = function(robot) {
     }
     let openPollList = '';
     for (let i=0; i<pollList.length; i++) {
-      var poll = robot.brain.get(pollList[i]);
-      let end = Moment(poll.endTime);
-      if (end.isAfter(timeNow) && (!poll.votes || poll.votes[callerUserID] === undefined)) {          
+      var poll = robot.brain.get(pollList[i]);      
+      if (!poll.closed && poll.votes[callerUserId] === undefined) {          
         openPollList += i + '. ' + poll.title + '\n';
       }        
     } 
@@ -718,15 +964,16 @@ module.exports = function(robot) {
     msg.reply(replyString);
   });
 
-  robot.respond(/show poll ([0-9])/i, function(msg) {
-
-    let callerUserID = msg.message.user.id;
+  robot.respond(/show poll ([0-9]{1,2})/i, function(msg) {
+    
+    let callerUserId = msg.message.user.id;
+    let callerUser = robot.brain.userForId(callerUserId);
 
     if (!userHasRole(msg,'core'))
       return;
       
     let pollList = robot.brain.get('polls');
-    console.log(pollList);
+
     if (!pollList) {
       msg.reply('No polls underway.');
       return;
@@ -749,24 +996,145 @@ module.exports = function(robot) {
       replyString  += poll.letters[i]+'. '+poll.choices[i] +'\n';
     }
     
-    let now = Moment();
-    let end = Moment(poll.endTime);
-    if (now.isAfter(end)) {
-      replyString += 'Poll has already ended'; 
-
-    }        
+    if (poll.closed) {
+      replyString += 'Poll has already closed\n'; 
+      if (poll.status === 'complete') {
+        replyString += 'Result: '+poll.results.winner.letter+' with '+poll.results.winner.count+' votes\n';   
+      
+        if (callerUser.polls && callerUser.polls[poll.pollId]) {
+          let p = callerUser.polls[poll.pollId];
+          if (p.vote === 'A')
+            replyString += 'Your vote was counted as No due to '+p.status+'\n';
+          else {
+            if (!isNaN(p.vote))
+              replyString += 'You voted '+poll.letters[p.vote];
+            else {          
+              let dUser = robot.brain.userForId(p.vote);
+              let dUserVote = poll.votes[dUser];
+              replyString += 'You delegated your vote to '+dUser.name+' who voted '+poll.letters[dUserVote]+': '+poll.choices[dUserVote];
+            }
+          }
+        }
+      }
+      else if (poll.status === 'cancelled') {
+        replyString += 'Poll was cancelled. No Results.';   
+      }
+    }
     else {
-      if (poll.votes && poll.votes[callerUserID] != undefined) {
+      if (poll.votes[callerUserId] !== undefined) {
         replyString += 'You have previously voted on this poll.' +'\n';
-        replyString += 'You voted '+poll.choices[poll.votes[callerUserID]]+'\n';        
+        replyString += 'You voted '+poll.choices[poll.votes[callerUserId]]+'\n';        
       }   
       else {
         replyString += 'You have not yet voted on this poll.' +'\n';
       }    
 
-      replyString += 'Poll ends '+end.format('LL');
+      let end = Moment(pollData.endTime);
+      replyString += 'Poll ends '+end.fromNow();
     }
     
+    msg.reply(replyString);
+  });
+
+  robot.respond(/audit poll ([0-9]{1,2})/i, function(msg) {
+    let callerUserId = msg.message.user.id;
+    let callerUser = robot.brain.userForId(callerUserId);
+
+    if (!userHasRole(msg,'core'))
+      return;
+      
+    let pollList = robot.brain.get('polls');
+
+    if (!pollList) {
+      msg.reply('No polls underway.');
+      return;
+    }
+    let pollIndex = msg.match[1];
+    if (pollList[pollIndex] === undefined) {
+      msg.reply('No poll number '+msg.match[1]);
+      return;
+    }
+    let poll = robot.brain.get(pollList[pollIndex]);        
+    if (!poll) {
+      msg.reply('No poll number '+msg.match[1]);
+      return;
+    }
+    if (!poll.closed) {
+      msg.reply('Poll not complete. Status: '+poll.status);
+      return;
+    }
+
+    
+    
+    let replyString = '*Audit of Poll #'+poll.pollNum+':*\n';    
+    replyString += 'Participants: '+poll.participants+'\n';
+    for (let i in poll.participants) {
+      let userName = poll.participants[i];
+      let u = robot.brain.userForName(userName);
+      let p = u.polls[poll.pollId];
+      if (p.status === 'Delegated') {
+        let d = robot.brain.userForId(p.origVote);
+        replyString += u.name + ' delegated their vote to ' +d.name+ ' who voted '+poll.letters[p.vote]+'\n';
+      }
+      else if (p.vote === 'A' && p.status !== 'Absence') {
+        let d = robot.brain.userForId(p.origVote);
+        replyString += u.name + ' delegated their vote to ' +d.name+ ' but was counted as Absent due to '+p.status+'\n';        
+      }
+      else if (p.vote === 'A') {
+        replyString += u.name + ' did not vote and was counted Absent\n';
+      }
+      else if (p.vote) {
+        replyString += u.name + ' voted '+p.vote+'\n';
+      }
+      else {
+        replyString += u.name + ' did not vote\n';
+        console.log('missing vote record ',u);
+      }      
+    }
+    let absentUsers = poll.participants.slice();
+    replyString += '\nVotes as Counted:\n';
+    Object.keys(poll.votes).forEach(function(userId) {   
+      let u = robot.brain.userForId(userId);
+      let vote = poll.votes[userId];
+      if (isNaN(vote)) {
+        let d = robot.brain.userForId(vote);
+        replyString += u.name+' delegated: '+vote+' ('+d.name+')\n';
+      }
+      else 
+        replyString += u.name+' voted: '+vote+'\n';
+
+      let i = absentUsers.indexOf(u.name);        
+      absentUsers.splice(i,1);
+    });
+    if (poll.scope === 'full') {
+      for (let i in absentUsers) {
+        let userId = absentUsers[i];
+        let u = robot.brain.userForId(userId);
+        replyString += u.name+' was marked absent\n';
+      }
+    }
+    replyString += '\nVote Tally:\n';
+    for (let i=0;i<poll.numOptions;i++) {    
+      let letter = poll.letters[i];      
+      replyString += poll.results.votes[letter].count+' votes for '+letter+': '+poll.results.votes[letter].choice+'\n';
+    }
+    if (poll.results.votes['A'])
+      replyString += poll.results.votes['A'].count+' votes marked A: Absent\n';
+
+    if (poll.type === 'choice') {       
+      if (poll.results.draw.length > 0)
+        replyString += 'Result: DRAW - no clear winner';
+      else 
+        replyString += 'Result: WIN - option '+poll.results.winner.letter+' with '+poll.results.winner.count+' votes';
+    }
+    else if (poll.type === 'proposal' || poll.type === 'prop') {
+      if (poll.results.winner.letter === 'Y') {
+        replyString += 'Result: PASSED - quorum reached for Y with '+poll.results.winner.count+' votes';  
+      }
+      else {
+        replyString += 'Result: FAILED - no quorum with '+poll.results.winner.count+' votes for:'+poll.results.winner.choice;
+      }
+    }
     msg.reply(replyString);
   });
 };

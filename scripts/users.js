@@ -43,7 +43,7 @@ module.exports = function(robot) {
           alias: rocketChatUsers[i].alias
         });
         user.room = 'ubibot';
-        user.roomID = 'esaWn95Srf5fyyrQG'; //this is the id of the ubibot room
+        user.roomID = 'y4qdL9SAJRZxpCy4E'; //this is the id of the ubibot room
         addedUsers.push(user);
       }
       msg.send(addedUsers.length+" Users added to brain");      
