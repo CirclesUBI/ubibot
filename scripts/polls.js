@@ -231,10 +231,12 @@ module.exports = function(robot) {
       });
 
       let nonVoters = poll.participants.slice();
+      console.log('all voters:',nonVoters);
           
       for (const userId of Object.keys(poll.votes)) {
         let i = nonVoters.indexOf(userId);        
         nonVoters.splice(i,1);
+        console.log(userId+' voted');
       }
 
       for (let i=0;i<nonVoters.length;i++) {
@@ -246,7 +248,8 @@ module.exports = function(robot) {
         user.polls[poll.pollId] = {          
           vote: 'A',
           status:'Absence'          
-        };        
+        }; 
+        console.log(user.name+' set absent '+userId);
       }               
       poll.results.votes['A'].count += nonVoters.length;
       
@@ -781,7 +784,7 @@ module.exports = function(robot) {
     
     if (!poll.votes) 
       poll.votes = {}; 
-    else if (typeof poll.votes[callerUser.id] !== 'undefined')      
+    else if (poll.votes[callerUser.id] !== undefined)      
       return msg.reply('You have already voted on this poll\n'+"Use command 'change vote on poll [1] to [A]' to change your vote");
 
     let voteIndex = poll.letters.indexOf(vote);
@@ -830,7 +833,7 @@ module.exports = function(robot) {
     else if (poll.closed)
       return msg.reply('Poll '+poll.pollNum+' closed. Status: '+poll.status);
           
-    if (!poll.votes || typeof poll.votes[callerUser.id] === 'undefined')      
+    if (!poll.votes || poll.votes[callerUser.id] === undefined)      
       return msg.reply('No vote to change. You have never voted on this poll');      
     
     let voteIndex = poll.letters.indexOf(vote);
@@ -875,7 +878,7 @@ module.exports = function(robot) {
 
     if (!poll.votes) 
       poll.votes = [];
-    else if (typeof poll.votes[callerUser.id] !== 'undefined')
+    else if (poll.votes[callerUser.id] !== undefined)
       return msg.reply('You have already voted on this poll\n'+"Use command 'change delegate vote on poll [1] to [username]' to change your vote");       
 
     poll.votes[callerUser.id] = dUser.id;
@@ -926,7 +929,7 @@ module.exports = function(robot) {
     else if (poll.closed)
       return msg.reply('Poll '+poll.pollNum+' closed. Status: '+poll.status);
       
-    if (!poll.votes || typeof poll.votes[callerUser.id] === 'undefined')
+    if (!poll.votes || poll.votes[callerUser.id] === undefined)
       return msg.reply('No vote to change. You have never voted on this poll');      
           
     poll.votes[callerUser.id] = dUser.id;
@@ -1158,8 +1161,15 @@ module.exports = function(robot) {
     }
     else {
       if (poll.votes[callerUserId] !== undefined) {
+        let vote = poll.votes[callerUserId];
         replyString += 'You have previously voted on this poll.' +'\n';
-        replyString += 'You voted '+poll.letters[poll.votes[callerUserId]]+'\n';        
+        if (!isNaN(vote))
+            replyString += 'You voted '+poll.letters[vote]+'\n';
+          else {          
+            let dUser = robot.brain.userForId(vote);
+            replyString += 'You delegated your vote to '+dUser.name;
+            replyString += (poll.votes[vote] !== undefined) ? ' who has voted.\n' : ' who has not voted yet.\n';
+          } 
       }   
       else {
         replyString += 'You have not yet voted on this poll.' +'\n';
