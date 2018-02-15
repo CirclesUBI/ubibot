@@ -1,3 +1,15 @@
+// Description
+//    User management script for rocketchat.
+//
+// Dependencies:
+//
+// Configuration:
+//
+// Commands:
+//
+// Author:
+//   edzillion@joincircles.net
+
 "use strict";
 
 function userHasRole(robot,msg,role) {
@@ -40,10 +52,11 @@ module.exports = function(robot) {
         }
         user = robot.brain.userForId(rocketChatUsers[i]._id, {
           name: rocketChatUsers[i].username,
-          alias: rocketChatUsers[i].alias
+          alias: rocketChatUsers[i].alias,
+          fullName: rocketChatUsers[i].name
         });
         user.room = 'ubibot';
-        user.roomID = 'y4qdL9SAJRZxpCy4E'; //this is the id of the ubibot room
+        user.roomID = 'dX9MFm7DBvfJHJggq'; //this is the id of the ubibot room
         addedUsers.push(user);
       }
       msg.send(addedUsers.length+" Users added to brain");      
@@ -65,30 +78,9 @@ module.exports = function(robot) {
       var output = '';
       if (result.length > 0) {
         for (var i=0; i<result.length; i++) {
-          output += result[i].name + ':' + result[i]._id + '\n';
+          output += result[i].name + ':' + result[i].username + '\n';
         }                
         msg.send(output);
-      } else {
-        msg.send("No users... \*cricket sound\*");
-      }
-    }, function(error) {
-        msg.send("Uh, sorry I don't know, something's not working");
-    });
-  });
-
-  // list all users by id
-  robot.respond(/list all user ids/i, function(msg) {
-
-    if (!userHasRole(robot,msg,'admin'))
-      return;
-
-    var promise;
-    promise = robot.adapter.callMethod('botRequest', 'allIDs');
-    return promise.then(function(result) {
-      var names;
-      if (result.length > 0) {
-        names = result.join(', ').replace(/,(?=[^,]*$)/, ' and ');
-        msg.send(names + " " + (result.length === 1 ? 'is' : 'are') + " currently online");
       } else {
         msg.send("No users... \*cricket sound\*");
       }
