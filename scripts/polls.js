@@ -505,7 +505,7 @@ module.exports = function(robot) {
           error: "Sorry your response didn't contain any text, please describe the poll."
         }, 
         {
-          question: "Optionally add a link to further information (not required):",
+          question: "Optionally add a link to further information: (not required)",
           answer: {
             type: "text"
           },
@@ -535,7 +535,7 @@ module.exports = function(robot) {
               error: "Sorry your response didn't contain any text, please enter the Yes/For option."
             },
             {
-              question: "Now enter the No/Against option (not required):",
+              question: "Now enter the No/Against option: (not required)",
               answer: {
                 type: "text"
               },
@@ -553,7 +553,7 @@ module.exports = function(robot) {
               error: "Sorry your response didn't contain any text, please enter the Yes/For option."
             },
             {
-              question: "Now enter the No/Against option (not required):",
+              question: "Now enter the No/Against option: (not required)",
               answer: {
                 type: "text"
               },
@@ -598,7 +598,7 @@ module.exports = function(robot) {
       else 
         pollData.participants = [];
 
-      pollData.pollLink = (dialogData.answers[pollLinkPosition].response.value === 'skip') ? null : dialogData.answers[pollLinkPosition].response.value;
+      pollData.pollLink = (dialogData.answers[pollLinkPosition].response.value.toLowerCase() === 'skip') ? null : dialogData.answers[pollLinkPosition].response.value;
 
       if (pollData.type === 'choice') {
         pollData.numOptions = Number(dialogData.answers[pollNumOptionsPosition].response.value);
@@ -609,7 +609,7 @@ module.exports = function(robot) {
         pollData.letters = ['A','B','C','D','E','F','G','H','I','J'];
       }
       else {
-        let noChoice = (dialogData.answers[pollProposalPosition+1].response.value === 'skip') ? 'Against' : dialogData.answers[pollProposalPosition+1].response.value;
+        let noChoice = (dialogData.answers[pollProposalPosition+1].response.value.toLowerCase() === 'skip') ? 'Against' : dialogData.answers[pollProposalPosition+1].response.value;
         pollData.choices[0] = capitalizeFirstLetter(noChoice);
         pollData.choices[1] = capitalizeFirstLetter(dialogData.answers[pollProposalPosition].response.value);
         pollData.choices[2] = 'Indifferent';
@@ -738,7 +738,7 @@ module.exports = function(robot) {
         let answer = dialogData.answers[0].response.value.toUpperCase();
         if (answer === 'Y') {          
           poll.closed = true;
-          poll.status = 'cancelled';
+          poll.status = 'Cancelled';
           poll.passed = false;
           poll.schedule.cancel();    
           return msg.reply('Poll '+poll.pollNum+' closed. Status: '+poll.status);      
@@ -958,14 +958,75 @@ module.exports = function(robot) {
         return msg.reply('Poll #'+poll.pollNum+' was not passed so cannot be vetoed.');
     }
      
-    conversation.start(msg, confirmConversationModel, function(err, msg, confirmDialog) {
+    const vetoConfirmConversationModel = {
+      abortKeyword: "quit",
+      onAbortMessage: "You have cancelled this conversation.",  
+      conversation: [
+        {
+          question: "Are you sure? [Y/y/N/n]",
+          answer: {
+            type: "choice",
+            options: [
+              {
+                match: "Y",
+                valid: true,
+                response: "OK, confirmed.",
+                value: "Y"
+              }, {
+                match: "y",
+                valid: true,
+                response: "OK, confirmed.",
+                value: "Y"
+              },{
+                match: "N",
+                valid: true,
+                response: "Abort.",
+                value: "N"
+              }, {
+                match: "n",
+                valid: true,
+                response: "Abort.",
+                value: "N"
+              }
+            ]
+          },
+          required: true,
+          error: "Sorry, I didn't understand your response. Please say [Y/y] or [N/n]"      
+        },
+        {
+          question: "Add your reason for vetoing here: (not required)",    
+          answer: {
+            type: "text"
+          },
+          required: false,
+          error: "Sorry your response didn't contain any text, please add your reason or say [skip]."
+        }
+      ]
+    };
+  
+    conversation.start(msg, vetoConfirmConversationModel, function(err, msg, confirmDialog) {
       let dialogData = confirmDialog.fetch();
       let answer = dialogData.answers[0].response.value.toUpperCase();
+      let reason = (dialogData.answers[1].response.value.toLowerCase() !== 'skip') ? dialogData.answers[1].response.value.toLowerCase() : undefined;
       if (answer === 'Y') {                  
         poll.status = 'Vetoed';
         poll.passed = false;
         poll.vetoedBy = callerUser.id;
-        return msg.reply('Poll '+poll.pollNum+' vetoed. Status: '+poll.status);      
+        
+        let vetoText = 'Poll #'+poll.pollNum+' has been vetoed by '+callerUser.fullName;
+        if (reason) {
+          poll.vetoReason = reason;
+          vetoText += 'Reason: '+reason;
+        }
+
+        let pollParticipants = poll.participants;
+        console.log('sending poll '+poll.pollNum+' veto to:'+pollParticipants);
+        for (let i=0; i<pollParticipants.length; i++) {   
+          let targetUser = robot.brain.userForId(pollParticipants[i]);                    
+          robot.adapter.sendDirect({user:targetUser}, vetoText);
+        }    
+        robot.send({room:pollingRoomName}, vetoText);
+        return msg.reply('Poll '+poll.pollNum+' vetoed.');  
       }
       else {
         return msg.reply('Cancelled veto. Poll still valid');
@@ -1124,7 +1185,7 @@ module.exports = function(robot) {
         }
       }
 
-      if (poll.status === 'cancelled') {
+      if (poll.status === 'Cancelled') {
         replyString += 'Poll was cancelled. No Results.';   
       }
       else if (poll.results.draw.length > 0) {
@@ -1136,8 +1197,11 @@ module.exports = function(robot) {
         replyString += 'Result: '+poll.results.winner.letter+' with '+poll.results.winner.count+' votes\n';   
     
       replyString += 'Status: '+poll.status+'\n';
-      if (poll.status === 'Vetoed')
-        replyString += '*This poll was vetoed by '+robot.brain.userForId(poll.vetoedBy).fullName+'*\n'
+      if (poll.status === 'Vetoed') {
+        replyString += '*This poll was vetoed by '+robot.brain.userForId(poll.vetoedBy).fullName+'*\n';
+        if (poll.vetoReason)
+          replyString += 'Reason: '+poll.vetoReason;
+      }
       replyString += (poll.passed) ? '*This poll PASSED and is in effect*' : '*This poll FAILED and has been discarded*';      
 
     }
@@ -1267,6 +1331,46 @@ module.exports = function(robot) {
       }
     }
     return msg.reply(replyString);
+  });
+
+  robot.respond(/polls help/i, function(msg) {
+
+    let helpText = 'List of commands:\n';
+    helpText += 'hubot start a poll - Starts a new poll\n';
+    helpText += 'hubot cancel poll - Cancel a poll\n';
+    helpText += 'hubot vote <letter> on poll <number>  - Vote\n';
+    helpText += 'hubot delegate vote on poll <number> to <username> - Delegate vote\n';
+    helpText += 'hubot change vote on poll <number> to <letter> - Change vote\n';
+    helpText += 'hubot change delegate vote on poll <number to <username> - Change vote to delegate\n';
+    helpText += 'hubot list polls - List all polls\n';
+    helpText += 'hubot list passed polls - List all polls that were passed\n';
+    helpText += 'hubot list failed polls - List all polls that failed\n';
+    helpText += 'hubot list open polls - List open polls you have not voted on\n';
+    helpText += 'hubot show poll <number> - Show poll details\n';
+    helpText += 'hubot audit poll <number> - Audit poll results\n';
+    helpText += 'hubot veto poll - Vetoes a passed poll\n';
+    helpText += '\n';
+    helpText += 'Overview:\n';
+    helpText += '2 types of polls are available:\n';
+    helpText += 'Proposals - these are in the form of Yes/No to a particular proposal. You can also vote indifferent.\n';
+    helpText += 'Choice - Multiple choice polls.\n';
+    helpText += '2 further options define the scope of the poll:\n';
+    helpText += 'Full - require every core member to vote. If they are absent their vote will be counted as No.\n';
+    helpText += 'Partial - Anyone can vote if they choose. The poll can close early if a quorum is reached before the deadline.\n';
+    helpText += 'Poll details can be reviewed before starting the poll. Polls may be cancelled by the owner of the poll.\n';
+    helpText += '\n';
+    helpText += 'Polling time is '+pollingTerm.amount+' '+pollingTerm.type+'\n';
+    helpText += 'Partial polls will close '+pollingInterval.amount+' '+pollingInterval.type+' after quorum is reached.\n';
+    helpText += 'In the case of choice polls, a quorum is reached if there is one clear winner.\n';
+    helpText += '\n';
+    helpText += 'Core members are notified of all polls, and sent reminders of polls they are participating in.\n';
+    helpText += 'Poll announcements and results are posted in the #polling-internal channel.\n';
+    helpText += 'Users have '+vetoTerm.amount+' '+vetoTerm.type+' to veto a poll. All vetoes are public.\n';
+    helpText += '\n';
+    helpText += 'All ubibot and polling code available here: https://github.com/CirclesUBI/ubibot\n';
+    helpText += 'Get in touch with @edzillion for any comments or suggestions.';
+
+    return msg.reply(helpText);
   });
 
   // ADMIN ONLY COMMANDS
