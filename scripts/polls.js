@@ -88,24 +88,6 @@ const confirmConversationModel = {
   ]
 };
 
-//const testUserId = 'a3kgfm9g7l';
-
-// let coreusers = [
-//   'ZsuLNtEip9g98EYER',
-//   'Xwgmz977BntmXXP3e',
-//   'iKjDSNBqdFMvxCT48',
-//   'zgfuB2P5P2ErF6Nyr',
-//   'GhfX7a7CukJbw2Z72',
-//   'fuqTJHzTda7yGwZS4',
-//   'neAerNQBFenMNibqa',
-//   '6z8y4HR4oKMXLt3Yz',
-//   '4yaDDNKCtSCGwGysW',
-//   'YgdcjWc2MWkwfFoDs',
-//   'bTtftsEqgtKLWLeGQ',
-//   'eAocL4XvXSvGqSA5q',
-//   'sZdrn4uSiL6yCW3e2'
-// ];
-
 module.exports = function(robot) {
   
   
@@ -149,7 +131,7 @@ module.exports = function(robot) {
       pollMessage += poll.letters[i]+'. '+poll.choices[i] +'\n';
     }
     let end = Moment(poll.endTime);
-    pollMessage += 'Poll ends '+end.format('LL');  
+    pollMessage += 'Poll ends '+end.fromNow();
 
     //all polls announced to everyone
     let recipients = robot.auth.usersWithRole('core');
@@ -250,15 +232,15 @@ module.exports = function(robot) {
 
       let nonVoters = poll.participants.slice();
           
-      for (const userName of Object.keys(poll.votes)) {
-        let i = nonVoters.indexOf(userName);        
+      for (const userId of Object.keys(poll.votes)) {
+        let i = nonVoters.indexOf(userId);        
         nonVoters.splice(i,1);
       }
 
       for (let i=0;i<nonVoters.length;i++) {
-        let username = nonVoters[i];
-        console.log('userForName',username);
-        let user = robot.brain.userForName(username);
+        let userId = nonVoters[i];
+        console.log('userForId',userId);
+        let user = robot.brain.userForId(userId);
         if (!user.polls)
           user.polls = {};
         user.polls[poll.pollId] = {          
@@ -303,6 +285,7 @@ module.exports = function(robot) {
         }
         else {
           let now = Moment();
+          poll.endTime = Moment(poll.endTime);
           if (poll.endTime.isBefore(now)) {
             poll.closed = true;
             poll.passed = false;
@@ -346,6 +329,7 @@ module.exports = function(robot) {
           else {  
             poll.results.winner = poll.results.votes['0'];
             let now = Moment();
+            poll.endTime = Moment(poll.endTime);
             if (poll.endTime.isBefore(now)) {              
               poll.closed = true;
               poll.passsed = false;
@@ -416,8 +400,8 @@ module.exports = function(robot) {
     let pollParticipants = poll.participants;
     console.log('sending poll '+poll.pollNum+' end to:'+pollParticipants);
     for (let i=0; i<pollParticipants.length; i++) { 
-      console.log('userForName',pollParticipants[i]);     
-      let targetUser = robot.brain.userForName(pollParticipants[i]);                    
+      console.log('userForId',pollParticipants[i]);     
+      let targetUser = robot.brain.userForId(pollParticipants[i]);                    
       robot.adapter.sendDirect({user:targetUser}, resultText);
     }
     
@@ -607,11 +591,20 @@ module.exports = function(robot) {
         choices: [],        
         votes: {},
         proposer:msg.message.user.id,
-        ended: false,
+        closed: false,
         status: 'Active'
       };
       
-      pollData.participants = (pollData.scope === 'full') ? robot.auth.usersWithRole('core') : [];
+      if (pollData.scope === 'full') {
+        let users = robot.auth.usersWithRole('core');
+        for (let i=0; i<users.length; i++) {
+          let user = robot.brain.userForName(users[i]);
+          pollData.participants.push(user.id);
+        }
+      }
+      else 
+        pollData.participants = [];
+
       pollData.pollLink = (dialogData.answers[pollLinkPosition].response.value === 'skip') ? null : dialogData.answers[pollLinkPosition].response.value;
 
       if (pollData.type === 'choice') {
@@ -805,7 +798,7 @@ module.exports = function(robot) {
     
     callerUser.polls[poll.pollId] = {vote:voteIndex};
     if (poll.scope === 'partial' || poll.scope === 'part') {      
-      poll.participants.push(callerUser.name);
+      poll.participants.push(callerUser.id);
       if (Object.keys(poll.votes).length > 1) {
         let newEndDate = Moment().add(pollingInterval.amount,pollingInterval.type).toDate();
         let success = poll.schedule.reschedule(newEndDate);
@@ -845,7 +838,7 @@ module.exports = function(robot) {
       return msg.reply('No poll option '+vote);
       
     poll.votes[callerUser.id] = voteIndex; 
-    callerUser.polls[poll.pollId].vote = {vote:voteIndex};        
+    callerUser.polls[poll.pollId] = {vote:voteIndex};        
 
     let replyString = 'Changed vote to '+vote+': '+poll.choices[voteIndex]+ ' on poll '+pollIndex+':'+poll.title;    
     if (poll.scope === 'partial' || poll.scope === 'part')
@@ -893,7 +886,7 @@ module.exports = function(robot) {
     callerUser.polls[poll.pollId] = {vote:dUser.id};
 
     if (poll.scope === 'partial' || poll.scope === 'part') {      
-      poll.participants.push(callerUser.name);
+      poll.participants.push(callerUser.id);
       if (Object.keys(poll.votes).length > 1) {     
         let newEndDate = Moment().add(pollingInterval.amount,pollingInterval.type).toDate();
         let success = poll.schedule.reschedule(newEndDate);
@@ -966,16 +959,19 @@ module.exports = function(robot) {
     let now = Moment();
     if (!poll)
       return msg.reply('No poll number '+msg.match[1]);    
-    else if (!poll.closed)
-      return msg.reply('Poll #'+poll.pollNum+' is still open.');
-    else if (poll.scope === 'full' && poll.participants.indexOf(callerUser.name) === -1)
-      return msg.reply('Poll #'+poll.pollNum+' is not a poll you participated in.');
-    else if (poll.endTime.add(vetoTerm.amount,vetoTerm.type).isAfter(now))
-      return msg.reply('Poll #'+poll.pollNum+' closed over '+vetoTerm.amount+' '+vetoTerm.type+' ago.');
-    else if (poll.status === 'Vetoed')
-      return msg.reply('Poll #'+poll.pollNum+' already vetoed by '+robot.brain.userForId(poll.vetoedBy).fullName);
-    else if (poll.passed === false)
-      return msg.reply('Poll #'+poll.pollNum+' was not passed so cannot be vetoed.');
+    else {
+      poll.endTime = Moment(poll.endTime);
+      if (!poll.closed)
+        return msg.reply('Poll #'+poll.pollNum+' is still open.');
+      else if (poll.scope === 'full' && poll.participants.indexOf(callerUser.id) === -1)
+        return msg.reply('Poll #'+poll.pollNum+' is not a poll you participated in.');
+      else if (poll.endTime.add(vetoTerm.amount,vetoTerm.type).isAfter(now))
+        return msg.reply('Poll #'+poll.pollNum+' closed over '+vetoTerm.amount+' '+vetoTerm.type+' ago.');
+      else if (poll.status === 'Vetoed')
+        return msg.reply('Poll #'+poll.pollNum+' already vetoed by '+robot.brain.userForId(poll.vetoedBy).fullName);
+      else if (poll.passed === false)
+        return msg.reply('Poll #'+poll.pollNum+' was not passed so cannot be vetoed.');
+    }
      
     conversation.start(msg, confirmConversationModel, function(err, msg, confirmDialog) {
       let dialogData = confirmDialog.fetch();
@@ -1126,6 +1122,23 @@ module.exports = function(robot) {
     
     if (poll.closed) {
       replyString += 'Poll has already closed\n'; 
+
+      if (callerUser.polls && callerUser.polls[poll.pollId]) {
+        let p = callerUser.polls[poll.pollId];
+        if (p.vote === 'A')
+          replyString += 'Your vote was counted as No due to '+p.status+'\n';
+        else {
+          if (!isNaN(p.vote))
+            replyString += 'You voted '+poll.letters[p.vote]+'\n';
+          else {          
+            console.log('userForId',p.vote);
+            let dUser = robot.brain.userForId(p.vote);
+            let dUserVote = poll.votes[dUser];
+            replyString += 'You delegated your vote to '+dUser.name+' who voted '+poll.letters[dUserVote]+': '+poll.choices[dUserVote]+'\n';
+          }
+        }
+      }
+
       if (poll.status === 'cancelled') {
         replyString += 'Poll was cancelled. No Results.';   
       }
@@ -1142,26 +1155,11 @@ module.exports = function(robot) {
         replyString += '*This poll was vetoed by '+robot.brain.userForId(poll.vetoedBy).fullName+'*\n'
       replyString += (poll.passed) ? '*This poll PASSED and is in effect*' : '*This poll FAILED and has been discarded*';      
 
-      if (callerUser.polls && callerUser.polls[poll.pollId]) {
-        let p = callerUser.polls[poll.pollId];
-        if (p.vote === 'A')
-          replyString += 'Your vote was counted as No due to '+p.status+'\n';
-        else {
-          if (!isNaN(p.vote))
-            replyString += 'You voted '+poll.letters[p.vote];
-          else {          
-            console.log('userForId',p.vote);
-            let dUser = robot.brain.userForId(p.vote);
-            let dUserVote = poll.votes[dUser];
-            replyString += 'You delegated your vote to '+dUser.name+' who voted '+poll.letters[dUserVote]+': '+poll.choices[dUserVote];
-          }
-        }
-      }
     }
     else {
       if (poll.votes[callerUserId] !== undefined) {
         replyString += 'You have previously voted on this poll.' +'\n';
-        replyString += 'You voted '+poll.choices[poll.votes[callerUserId]]+'\n';        
+        replyString += 'You voted '+poll.letters[poll.votes[callerUserId]]+'\n';        
       }   
       else {
         replyString += 'You have not yet voted on this poll.' +'\n';
@@ -1200,27 +1198,33 @@ module.exports = function(robot) {
       
     
     let replyString = '*Audit of Poll #'+poll.pollNum+':*\n';    
-    replyString += 'Participants: '+poll.participants+'\n';
+    replyString += 'Participants:\n';
     for (let i in poll.participants) {
-      let userName = poll.participants[i];
-      console.log('userForName',userName);
-      let u = robot.brain.userForName(userName);
-      let p = u.polls[poll.pollId];
-      if (p.status === 'Delegated') {
-        console.log('userForId',p.origVote);
-        let d = robot.brain.userForId(p.origVote);
-        replyString += u.fullName + ' delegated their vote to ' +d.name+ ' who voted '+poll.letters[p.vote]+'\n';
-      }
-      else if (p.vote === 'A' && p.status !== 'Absence') {
-        console.log('userForId',p.origVote);
-        let d = robot.brain.userForId(p.origVote);
-        replyString += u.fullName + ' delegated their vote to ' +d.name+ ' but was counted as Absent due to '+p.status+'\n';        
-      }
-      else if (p.vote === 'A') {
-        replyString += u.fullName + ' did not vote and was counted Absent\n';
-      }
-      else if (p.vote >= 0) {
-        replyString += u.fullName + ' voted '+poll.letters[p.vote]+'\n';
+      let userId = poll.participants[i];
+      console.log('userForId',userId);
+      let u = robot.brain.userForId(userId);
+      if (u.polls) {
+        let p = u.polls[poll.pollId];      
+        if (p.status === 'Delegated') {
+          console.log('userForId',p.origVote);
+          let d = robot.brain.userForId(p.origVote);
+          replyString += u.fullName + ' delegated their vote to ' +d.name+ ' who voted '+poll.letters[p.vote]+'\n';
+        }
+        else if (p.vote === 'A' && p.status !== 'Absence') {
+          console.log('userForId',p.origVote);
+          let d = robot.brain.userForId(p.origVote);
+          replyString += u.fullName + ' delegated their vote to ' +d.name+ ' but was counted as Absent due to '+p.status+'\n';        
+        }
+        else if (p.vote === 'A') {
+          replyString += u.fullName + ' did not vote and was counted Absent\n';
+        }
+        else if (p.vote >= 0) {
+          replyString += u.fullName + ' voted '+poll.letters[p.vote]+'\n';
+        }
+        else {
+          replyString += u.fullName + ' did not vote\n';
+          console.log('missing vote record ',u);
+        }      
       }
       else {
         replyString += u.fullName + ' did not vote\n';
@@ -1230,26 +1234,26 @@ module.exports = function(robot) {
     let absentUsers = poll.participants.slice();
     replyString += '\nVotes as Counted:\n';
     Object.keys(poll.votes).forEach(function(userId) {   
-      console.log('userForId',userId);
-      let u = robot.brain.userForId(userId);
       let vote = poll.votes[userId];
+      console.log('userForId',userId);
+      let user= robot.brain.userForId(userId);      
       if (isNaN(vote)) {
         console.log('userForId',vote);
-        let d = robot.brain.userForId(vote);
-        replyString += u.name+' delegated: '+vote+' ('+d.name+')\n';
+        let delegateUser = robot.brain.userForId(vote);
+        replyString += user.name+' delegated: '+vote+' ('+delegateUser.name+')\n';
       }
       else 
-        replyString += u.name+' voted: '+poll.letters[vote]+'\n';
+        replyString += user.name+' voted: '+poll.letters[vote]+'\n';
 
-      let i = absentUsers.indexOf(u.name);        
+      let i = absentUsers.indexOf(user.id);        
       absentUsers.splice(i,1);
     });
     if (poll.scope === 'full') {
       for (let i in absentUsers) {
         let userId = absentUsers[i];
         console.log('userForId',userId);
-        let u = robot.brain.userForId(userId);
-        replyString += u.name+' was marked absent\n';
+        let user = robot.brain.userForId(userId);
+        replyString += user.name+' was marked absent\n';
       }
     }
     replyString += '\nVote Tally:\n';
@@ -1293,7 +1297,8 @@ module.exports = function(robot) {
       let poll = robot.brain.get(pollList[i]);        
       if (!poll)
         console.log('No poll number '+msg.match[1]+' while updating schedules');
-        
+      
+      poll.endTime = Moment(poll.endTime);
       if (!poll.closed && poll.endTime.isAfter(now)) {
         replyString += 'Setting schedule on poll number '+poll.pollNum+' status: '+poll.status+'\n';
         poll.schedule = Schedule.scheduleJob(poll.endTime.toDate(), function(pollId){
