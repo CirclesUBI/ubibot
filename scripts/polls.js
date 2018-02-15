@@ -94,7 +94,6 @@ module.exports = function(robot) {
   function userHasRole(msg,role) {  
 
     robot.logger.info("Checking if user: "+msg.message.user.name+" has role "+role);
-    console.log('userForName',msg.message.user.name);
     let user = robot.brain.userForName(msg.message.user.name);
     if (!user) {
       msg.reply(user.name + " does not exist");
@@ -137,7 +136,6 @@ module.exports = function(robot) {
     let recipients = robot.auth.usersWithRole('core');
     console.log('sending poll '+poll.pollNum+' announce to:'+recipients);
     for (let i=0; i<recipients.length; i++) {
-      console.log('userForName',recipients[i]);
       let targetUser = robot.brain.userForName(recipients[i]);                    
       robot.adapter.sendDirect({user:targetUser}, pollMessage);
     }
@@ -189,7 +187,6 @@ module.exports = function(robot) {
                   return;
                 }
                 poll.votes[userId] = dUserVote;
-                console.log('userForId',userId);
                 let user = robot.brain.userForId(userId);
                 let p = user.polls[poll.pollId];
                 p.origVote = p.vote;
@@ -204,7 +201,6 @@ module.exports = function(robot) {
 
       for (let i in poll.circDelegates) {
         let userId = poll.circDelegates[i];
-        console.log('userForId',userId);
         let user = robot.brain.userForId(userId);
         let p = user.polls[poll.pollId];
         p.origVote = p.vote;
@@ -214,7 +210,6 @@ module.exports = function(robot) {
       }
       for (let i in poll.absentDelegates) {
         let userId = poll.absentDelegates[i];
-        console.log('userForId',userId);
         let user = robot.brain.userForId(userId);
         let p = user.polls[poll.pollId];
         p.origVote = p.vote;
@@ -262,17 +257,14 @@ module.exports = function(robot) {
           poll.results.votes[i] = {choice:pollChoice,count:voteCount,letter:letter};
         
           if (!poll.results.winner) {
-            poll.results.winner = Object.assign({},poll.results.votes[i]);
-            //console.log('winner',poll.results.winner);            
+            poll.results.winner = Object.assign({},poll.results.votes[i]);          
           }
           else if (voteCount > poll.results.winner.count) {
             poll.results.winner = Object.assign({},poll.results.votes[i]);
-            //console.log('winner',poll.results.winner);
             poll.results.draw = [];
           }
           else if (voteCount === poll.results.winner.count) {
             poll.results.draw.push(i);
-            //console.log('draw',poll.results.draw);
             let num = poll.letters.indexOf(poll.results.winner.letter);
             if (poll.results.winner.choice !== null && poll.results.draw.indexOf(num) === -1)
               poll.results.draw.push(num);            
@@ -402,8 +394,7 @@ module.exports = function(robot) {
   
     let pollParticipants = poll.participants;
     console.log('sending poll '+poll.pollNum+' end to:'+pollParticipants);
-    for (let i=0; i<pollParticipants.length; i++) { 
-      console.log('userForId',pollParticipants[i]);     
+    for (let i=0; i<pollParticipants.length; i++) {   
       let targetUser = robot.brain.userForId(pollParticipants[i]);                    
       robot.adapter.sendDirect({user:targetUser}, resultText);
     }
@@ -583,7 +574,6 @@ module.exports = function(robot) {
 
       //msg.reply("Thanks for using ubibot! I'm always here to help.");
       let dialogData = pollDialog.fetch();
-      console.log(dialogData);
       let pollData = {
         title: capitalizeFirstLetter(dialogData.answers[pollTitlePosition].response.value),
         description: capitalizeFirstLetter(dialogData.answers[pollDescriptionPosition].response.value),
@@ -692,7 +682,6 @@ module.exports = function(robot) {
         let dialogData = confirmDialog.fetch();
         let answer = dialogData.answers[0].response.value.toUpperCase();
         if (answer === 'Y') {
-          console.log('userForId',msg.message.user.id);
           var user = robot.brain.userForId(msg.message.user.id);
           if (!user.polls) {
             user.polls = {};        
@@ -736,7 +725,6 @@ module.exports = function(robot) {
 
     let pollIndex = msg.match[1];
     let poll = robot.brain.get(pollList[pollIndex]);    
-    console.log('userForId',msg.message.user.id);
     let callerUser = robot.brain.userForId(msg.message.user.id);
 
     if (!poll)
@@ -774,7 +762,6 @@ module.exports = function(robot) {
     let vote = msg.match[1].toUpperCase();
     let pollIndex = msg.match[2];
     let poll = robot.brain.get(pollList[pollIndex]);    
-    console.log('userForId',msg.message.user.id);
     let callerUser = robot.brain.userForId(msg.message.user.id);
 
     if (!poll)
@@ -824,7 +811,6 @@ module.exports = function(robot) {
     
     let vote = msg.match[2].toUpperCase();
     let pollIndex = msg.match[1];    
-    console.log('userForId',msg.message.user.id);
     let callerUser = robot.brain.userForId(msg.message.user.id);
     let poll = robot.brain.get(pollList[pollIndex]);
 
@@ -860,14 +846,12 @@ module.exports = function(robot) {
       return msg.reply('No polls underway.');
       
     let delegateUsername = msg.match[2];
-    console.log('userForName',delegateUsername);
     let dUser  = robot.brain.userForName(delegateUsername);
-
-    if (dUser === undefined)
+    console.log(dUser);
+    if (dUser === undefined || dUser === null)
       return msg.reply('No username: '+delegateUsername+'. Have you spelled it correctly?');      
 
     let pollIndex = msg.match[1];
-    console.log('userForId',msg.message.user.id);
     let callerUser = robot.brain.userForId(msg.message.user.id);
     let poll = robot.brain.get(pollList[pollIndex]);
 
@@ -913,14 +897,12 @@ module.exports = function(robot) {
       return msg.reply('No polls underway.');
       
     let delegateUsername = msg.match[2];
-    console.log('userForName',delegateUsername);
     let dUser  = robot.brain.userForName(delegateUsername);
     
-    if (dUser === undefined)
+    if (dUser === undefined || dUser === null)
       return msg.reply('No username: '+delegateUsername+'. Have you spelled it correctly?');
 
     let pollIndex = msg.match[1];
-    console.log('userForId',msg.message.user.id);
     let callerUser = robot.brain.userForId(msg.message.user.id);
     let poll = robot.brain.get(pollList[pollIndex]);
 
@@ -1211,17 +1193,14 @@ module.exports = function(robot) {
     replyString += 'Participants:\n';
     for (let i in poll.participants) {
       let userId = poll.participants[i];
-      console.log('userForId',userId);
       let u = robot.brain.userForId(userId);
       if (u.polls) {
         let p = u.polls[poll.pollId];      
         if (p.status === 'Delegated') {
-          console.log('userForId',p.origVote);
           let d = robot.brain.userForId(p.origVote);
           replyString += u.fullName + ' delegated their vote to ' +d.name+ ' who voted '+poll.letters[p.vote]+'\n';
         }
         else if (p.vote === 'A' && p.status !== 'Absence') {
-          console.log('userForId',p.origVote);
           let d = robot.brain.userForId(p.origVote);
           replyString += u.fullName + ' delegated their vote to ' +d.name+ ' but was counted as Absent due to '+p.status+'\n';        
         }
@@ -1248,7 +1227,6 @@ module.exports = function(robot) {
       console.log('userForId',userId);
       let user= robot.brain.userForId(userId);      
       if (isNaN(vote)) {
-        console.log('userForId',vote);
         let delegateUser = robot.brain.userForId(vote);
         replyString += user.name+' delegated: '+vote+' ('+delegateUser.name+')\n';
       }
