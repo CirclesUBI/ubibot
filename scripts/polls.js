@@ -2,7 +2,7 @@
 //   Polling system for proposal and mutliple-choice votes.
 //
 // Dependencies:
-//   "hubot-dynamic-conversation":"1.0.1", 
+//   "hubot-dynamic-conversation":"1.0.2", 
 //   "node-schedule":"1.3.0", 
 //   "moment":"2.20.1", 
 //   "guid":"0.0.12"
@@ -10,17 +10,18 @@
 // Configuration:
 //
 // Commands:
-//    hubot start a poll - Starts a new poll
-//    hubot cancel poll - Cancel a poll
-//    hubot vote <letter> on poll <number>  - Vote
-//    hubot change vote on poll <number> to <letter> - Change vote
-//    hubot delegate vote on poll <number> to <username> - Delegate vote
-//    hubot change delegate vote on poll <number to <username> - Change vote to delegate
-//    hubot list polls - List all polls
-//    hubot list open polls - List open polls you have not voted on
-//    hubot show poll <number> - Show poll details
-//    hubot audit poll <number> - Audit poll results
-//    hubot veto poll - Vetoes a passed poll
+//    ubibot polls help
+//    ubibot start a poll - Starts a new poll
+//    ubibot cancel poll - Cancel a poll
+//    ubibot vote <letter> on poll <number>  - Vote
+//    ubibot change vote on poll <number> to <letter> - Change vote
+//    ubibot delegate vote on poll <number> to <username> - Delegate vote
+//    ubibot change delegate vote on poll <number to <username> - Change vote to delegate
+//    ubibot list polls - List all polls
+//    ubibot list open polls - List open polls you have not voted on
+//    ubibot show poll <number> - Show poll details
+//    ubibot audit poll <number> - Audit poll results
+//    ubibot veto poll - Vetoes a passed poll
 //
 // Author:
 //   edzillion@joincircles.net
@@ -46,9 +47,10 @@ const pollProposalPosition = 5;
 
 const pollingRoomName = 'polling-internal';
 
-const pollingTerm = {amount:'1',type:'day'};
-const pollingInterval = {amount:'2',type:'hours'};
-const vetoTerm = {amount:'1',type:'day'};
+const pollingTerm = {amount:'1',type:'week'};
+const pollingInterval = {amount:'24',type:'hours'};
+const vetoTerm = {amount:'2',type:'days'};
+const remindTime = {amount:'2',type:'days'};
 
 const confirmConversationModel = {
   abortKeyword: "quit",
@@ -277,6 +279,8 @@ module.exports = function(robot) {
           poll.closed = true;
           poll.passed = true;
           poll.status = (poll.scope === 'full') ? 'Complete': 'Choice reached early';
+          if (poll.reminderSchedule)
+            poll.reminderSchedule.cancel(); 
         }
         else {
           let now = Moment();
@@ -320,6 +324,8 @@ module.exports = function(robot) {
             poll.closed = true;
             poll.passed = false;
             poll.status = 'Complete';
+            if (poll.reminderSchedule)
+              poll.reminderSchedule.cancel(); 
           }
           else {  
             poll.results.winner = poll.results.votes['0'];
@@ -589,6 +595,8 @@ module.exports = function(robot) {
       };
       
       if (pollData.scope === 'full') {
+        if (!pollData.participants)
+          pollData.participants = [];
         let users = robot.auth.usersWithRole('core');
         for (let i=0; i<users.length; i++) {
           let user = robot.brain.userForName(users[i]);
@@ -701,6 +709,25 @@ module.exports = function(robot) {
           pollData.schedule = Schedule.scheduleJob(pollData.endTime.toDate(), function(pollId){
             endPoll(pollId);
           }.bind(null,pollData.pollId));
+          
+          if (pollData.scope === 'full') {
+            let reminder = pollData.endTime.subtract(remindTime.amount,remindTime.type);
+            pollData.reminderSchedule = Schedule.scheduleJob(reminder.toDate(), function(pollId){
+              let poll = robot.brain.get(pollId);
+              let nonVoters = poll.participants.slice();
+              for (const userId of Object.keys(poll.votes)) {
+                let i = nonVoters.indexOf(userId);        
+                nonVoters.splice(i,1);
+              }
+              let reminderText = '*Reminder! You have not voted in the Full Poll: '+poll.title+'*\n';
+              reminderText = 'The poll ends in '+remindTime.amount+' '+remindTime.type;
+              console.log('sending poll '+poll.pollNum+' reminder to:'+nonVoters);
+              for (let i=0; i<nonVoters.length; i++) {   
+                let targetUser = robot.brain.userForId(nonVoters[i]);                    
+                robot.adapter.sendDirect({user:targetUser}, reminderText);
+              }
+            }.bind(null,pollData.pollId));
+          }
 
           pollData.startTime = Moment();
 
@@ -740,7 +767,9 @@ module.exports = function(robot) {
           poll.closed = true;
           poll.status = 'Cancelled';
           poll.passed = false;
-          poll.schedule.cancel();    
+          poll.schedule.cancel();
+          if (poll.reminderSchedule)
+            poll.reminderSchedule.cancel(); 
           return msg.reply('Poll '+poll.pollNum+' closed. Status: '+poll.status);      
         }
       });
@@ -1336,19 +1365,20 @@ module.exports = function(robot) {
   robot.respond(/polls help/i, function(msg) {
 
     let helpText = 'List of commands:\n';
-    helpText += 'hubot start a poll - Starts a new poll\n';
-    helpText += 'hubot cancel poll - Cancel a poll\n';
-    helpText += 'hubot vote <letter> on poll <number>  - Vote\n';
-    helpText += 'hubot delegate vote on poll <number> to <username> - Delegate vote\n';
-    helpText += 'hubot change vote on poll <number> to <letter> - Change vote\n';
-    helpText += 'hubot change delegate vote on poll <number to <username> - Change vote to delegate\n';
-    helpText += 'hubot list polls - List all polls\n';
-    helpText += 'hubot list passed polls - List all polls that were passed\n';
-    helpText += 'hubot list failed polls - List all polls that failed\n';
-    helpText += 'hubot list open polls - List open polls you have not voted on\n';
-    helpText += 'hubot show poll <number> - Show poll details\n';
-    helpText += 'hubot audit poll <number> - Audit poll results\n';
-    helpText += 'hubot veto poll - Vetoes a passed poll\n';
+    helpText += '(note: ubibot can be used either publicly in his channel #ubibot, or privately by direct messaging him)\n';
+    helpText += 'ubibot start a poll - Starts a new poll\n';
+    helpText += 'ubibot cancel poll - Cancel a poll\n';
+    helpText += 'ubibot vote <letter> on poll <number>  - Vote\n';
+    helpText += 'ubibot delegate vote on poll <number> to <username> - Delegate vote\n';
+    helpText += 'ubibot change vote on poll <number> to <letter> - Change vote\n';
+    helpText += 'ubibot change delegate vote on poll <number to <username> - Change vote to delegate\n';
+    helpText += 'ubibot list polls - List all polls\n';
+    helpText += 'ubibot list passed polls - List all polls that were passed\n';
+    helpText += 'ubibot list failed polls - List all polls that failed\n';
+    helpText += 'ubibot list open polls - List open polls you have not voted on\n';
+    helpText += 'ubibot show poll <number> - Show poll details\n';
+    helpText += 'ubibot audit poll <number> - Audit poll results\n';
+    helpText += 'ubibot veto poll - Vetoes a passed poll\n';
     helpText += '\n';
     helpText += 'Overview:\n';
     helpText += '2 types of polls are available:\n';
@@ -1390,7 +1420,7 @@ module.exports = function(robot) {
       if (!poll)
         console.log('No poll number '+msg.match[1]+' while updating schedules');
       
-      poll.endTime = Moment(poll.endTime);
+      poll.endTime = Moment(poll.endTime);      
       if (!poll.closed && poll.endTime.isAfter(now)) {
         replyString += 'Setting schedule on poll number '+poll.pollNum+' status: '+poll.status+'\n';
         poll.schedule = Schedule.scheduleJob(poll.endTime.toDate(), function(pollId){
@@ -1399,6 +1429,28 @@ module.exports = function(robot) {
       }
       else 
         replyString += 'Skipping poll number '+poll.pollNum+' status: '+poll.status+'\n';
+
+      if (poll.scope === 'full') {
+        let remind = poll.endTime.subtract(remindTime.amount,remindTime.type);
+        if (remind.isAfter(now)) {
+          replyString += 'Setting reminders on poll number '+poll.pollNum+'\n';
+          poll.reminderSchedule = Schedule.scheduleJob(reminder.toDate(), function(pollId){
+            let poll = robot.brain.get(pollId);
+            let nonVoters = poll.participants.slice();
+            for (const userId of Object.keys(poll.votes)) {
+              let i = nonVoters.indexOf(userId);        
+              nonVoters.splice(i,1);
+            }
+            let reminderText = '*Reminder! You have not voted in the Full Poll: '+poll.title+'*\n';
+            reminderText = 'The poll ends in '+remindTime.amount+' '+remindTime.type;
+            console.log('sending poll '+poll.pollNum+' reminder to:'+nonVoters);
+            for (let i=0; i<nonVoters.length; i++) {   
+              let targetUser = robot.brain.userForId(nonVoters[i]);                    
+              robot.adapter.sendDirect({user:targetUser}, reminderText);
+            }
+          }.bind(null,poll.pollId));
+        }
+      }      
     }
     return msg.reply(replyString);
   });

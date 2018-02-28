@@ -7,4 +7,6 @@
 7. DONE proposal / choice votes
 8. redis memory dump to drive
 9. DONE poll announcements
-10. vote delegation
+10. DONE vote delegation
+11. DONE fix vote changing
+12. 
