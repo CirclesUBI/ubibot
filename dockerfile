@@ -1,4 +1,4 @@
-FROM node:8.11.2
+FROM node:8-slim
 LABEL "maintainer"="Circles Team <buildmaster@joincircles.net> "
 
 RUN useradd hubot -m
