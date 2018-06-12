@@ -1,4 +1,4 @@
-FROM node:4.8.3 
+FROM node:8.11.2
 LABEL "maintainer"="Circles Team <buildmaster@joincircles.net> "
 
 RUN useradd hubot -m
@@ -24,11 +24,11 @@ RUN npm install
 ENV BOT_NAME "ubibot" 
 ENV BOT_OWNER "ed@joincircles.net" 	
 ENV BOT_DESC "CirclesUBI bot" 
-ENV ROCKETCHAT_URL "localhost"
-ENV ROCKETCHAT_USER "ubibot"
-ENV ROCKETCHAT_PASS "bot"
 
 ENV EXTERNAL_SCRIPTS=hubot-diagnostics,hubot-help,hubot-rules
-RUN ls -l /home/hubot/bin/hubot
 
-CMD	/home/hubot/bin/hubot -n $BOT_NAME -a rocketchat
+# RUN git clone https://github.com/vishnubob/wait-for-it.git
+# RUN git clone https://github.com/eficode/wait-for.git
+
+# CMD	/home/hubot/bin/hubot -n $BOT_NAME -a rocketchat
+CMD npm run local
