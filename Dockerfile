@@ -18,10 +18,15 @@ USER hubot
 
 RUN npm install
 
+RUN cd /home/hubot/node_modules/hubot-rocketchat && \
+	npm install && \
+	#coffee -c /home/hubot/node_modules/hubot-rocketchat/src/*.coffee && \
+  cd /home/hubot
+
 ENV BOT_NAME "ubibot" 
 ENV BOT_OWNER "ed@joincircles.net" 	
 ENV BOT_DESC "CirclesUBI bot" 
 
 ENV EXTERNAL_SCRIPTS=hubot-diagnostics,hubot-help,hubot-rules
 
-CMD npm run local
+CMD bin/hubot -n $BOT_NAME -a rocketchat
