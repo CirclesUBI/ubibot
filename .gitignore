@@ -60,4 +60,4 @@ typings/
 # hubot specific
 /.hubot_history
 
-ssh
+ssh/
