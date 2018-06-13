@@ -7,12 +7,12 @@ COPY ./bin /home/hubot/bin/
 
 COPY ./scripts /home/hubot/scripts/
 COPY package.json /home/hubot/package.json
-COPY /ssh/circles-rocketchat /home/hubot/.ssh/id_rsa
+# COPY /ssh/circles-rocketchat /home/hubot/.ssh/id_rsa
 
 USER root
 
-RUN chmod 700 /home/hubot/.ssh/id_rsa
-RUN chown hubot:hubot -R /home/hubot/.ssh 
+# RUN chmod 700 /home/hubot/.ssh/id_rsa
+# RUN chown hubot:hubot -R /home/hubot/.ssh 
 RUN chown hubot:hubot -R /home/hubot/bin 
 RUN chmod +x /home/hubot/bin/hubot
 
