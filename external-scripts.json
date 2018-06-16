@@ -1,1 +1,8 @@
-[]
+[
+    "hubot-diagnostics",
+    "hubot-help",
+    "hubot-rules",
+    "hubot-redis-brain",
+    "hubot-auth",
+    "hubot-env"
+  ]
