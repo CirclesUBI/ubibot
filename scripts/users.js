@@ -22,6 +22,11 @@ function _userHasRole (robot, msg, role) {
 }
 
 module.exports = (robot) => {
+
+  robot.hear(/!userid/i, (msg) => {
+     msg.reply('Your User ID is: '+msg.message.user.id)
+  })
+
   // add new users to hubot-brain
   robot.respond(/sync users with brain/i, (msg) => {
     if (!_userHasRole(robot, msg, 'admin')) return
