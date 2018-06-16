@@ -16,7 +16,7 @@
 // Author:
 //   Rocket.Chat
 module.exports = (robot) => {
-  robot.respond(/\brc(-|\s)version\b/i, function(res) {
+  robot.respond(/\brc(-|\s)version\b/i, (res) => {
     const hubotPackage = require.main.require('hubot/package.json')
     const adapterPackage = require.main.require('hubot-rocketchat/package.json')
     const sdkPackage = require.main.require('@rocket.chat/sdk/package.json')

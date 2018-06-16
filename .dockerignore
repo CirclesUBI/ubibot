@@ -1,0 +1,6 @@
+.git
+.cache
+.env
+docker-compose.yml
+README.md
+todo.txt
