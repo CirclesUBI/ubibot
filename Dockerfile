@@ -22,4 +22,4 @@ ENV BOT_NAME "ubibot"
 ENV BOT_OWNER "ed@joincircles.net" 	
 ENV BOT_DESC "CirclesUBI bot" 
 
-CMD ./bin/hubot -n $BOT_NAME -a rocketchat
+CMD ./bin/hubot -a rocketchat
