@@ -1,110 +1,85 @@
-// Description
-//    User management script for rocketchat.
-//
-// Dependencies:
-//
-// Configuration:
+// Description:
+//    Ubibot User Scripts
 //
 // Commands:
-//
-// Author:
-//   edzillion@joincircles.net
+//    sync users with brain - add new users to hubot-brain
+//    list all users - list all users by name:username
+//    list online users - list all users currently online by name
 
-"use strict";
-
-function userHasRole(robot,msg,role) {
-  
-  robot.logger.info("Checking if user: "+msg.message.user.name+" has role "+role);
-  var user;  
-  user = robot.brain.userForName(msg.message.user.name);
+function _userHasRole (robot, msg, role) {
+  robot.logger.info('Checking if user: ' + msg.message.user.name + ' has role ' + role)
+  let user = robot.brain.userForName(msg.message.user.name)
   if (!user) {
-    msg.reply(user.name + " does not exist");
-    return false;
-  }  
-  else if (!robot.auth.hasRole(user, role)) {
-    robot.logger.info("Permission Denied");
-    msg.reply("Access Denied. You need "+role+" role to perform this action.");
-    return false;
+    msg.reply(user.name + ' does not exist')
+    return false
+  } else if (!robot.auth.hasRole(user, role)) {
+    robot.logger.info('Permission Denied')
+    msg.reply('Access Denied. You need ' + role + ' role to perform this action.')
+    return false
   }
-  robot.logger.info("Permission Granted");
-  return true;
+  robot.logger.info('Permission Granted')
+  return true
 }
 
-module.exports = function(robot) {
-
-  // adds all users to robot brain, should only need to be done once in a bot's life
-  robot.respond(/sync users with brain/i, function(msg) {
-    
-    if (!userHasRole(robot,msg,'admin'))
-      return;
-
-    var promise;
-    promise = robot.adapter.callMethod('botRequest', 'allUsers');
-    return promise.then(function(rocketChatUsers) {
-      if (!rocketChatUsers)
-        return console.error('no rocketchat users!');      
-      var prevUsers = robot.brain.users();
-      var addedUsers = [];
-      var user;
-      for (var i=0; i<rocketChatUsers.length; i++) {
-        if (prevUsers[rocketChatUsers[i]._id]) {        
-          continue;
-        }
+module.exports = (robot) => {
+  // add new users to hubot-brain
+  robot.respond(/sync users with brain/i, (msg) => {
+    if (!_userHasRole(robot, msg, 'admin')) return
+    var promise = robot.adapter.callMethod('botRequest', 'allUsers')
+    return promise.then(rocketChatUsers => {
+      if (!rocketChatUsers) return console.error('no rocketchat users!')
+      let prevUsers = robot.brain.users()
+      let addedUsers = []
+      let user
+      for (var i = 0; i < rocketChatUsers.length; i++) {
+        if (prevUsers[rocketChatUsers[i]._id]) continue
         user = robot.brain.userForId(rocketChatUsers[i]._id, {
           name: rocketChatUsers[i].username,
           alias: rocketChatUsers[i].alias,
           fullName: rocketChatUsers[i].name
-        });
-        user.room = 'ubibot';
-        user.roomID = 'dX9MFm7DBvfJHJggq'; //this is the id of the ubibot room
-        addedUsers.push(user);
+        })
+        user.room = 'ubibot'
+        user.roomID = 'SY4jj8WuK8sR7NqNJ' // this is the id of the ubibot room
+        addedUsers.push(user)
+        msg.send(addedUsers.length + ' Users added to brain')
       }
-      msg.send(addedUsers.length+" Users added to brain");      
-    }, function(error) {
-        msg.send("Uh, sorry I don't know, something's not working");
-    });
-  });
+    }).catch(err => console.error(err))
+  })
 
-  // list all users by name
-  robot.respond(/list all users/i, function(msg) {
-    
-    if (!userHasRole(robot,msg,'admin'))
-      return;
-
-    var promise;
-    promise = robot.adapter.callMethod('botRequest', 'allUsers');
-    return promise.then(function(result) {
-      var users;      
-      var output = '';
+  // list all users by name:username
+  robot.respond(/list all users/i, (msg) => {
+    if (!_userHasRole(robot, msg, 'admin')) return
+    var promise = robot.adapter.callMethod('botRequest', 'allUsers')
+    return promise.then(result => {
+      let output = ''
       if (result.length > 0) {
-        for (var i=0; i<result.length; i++) {
-          output += result[i].name + ':' + result[i].username + '\n';
-        }                
-        msg.send(output);
+        for (var i = 0; i < result.length; i++) {
+          output += result[i].name + ':' + result[i].username + '\n'
+        }
+        msg.send(output)
       } else {
-        msg.send("No users... \*cricket sound\*");
+        msg.send('No users... *cricket sound*')
       }
-    }, function(error) {
-        msg.send("Uh, sorry I don't know, something's not working");
-    });
-  });
+    }).catch(err => console.error(err))
+  })
 
   // list all users currently online by name
-  robot.respond(/list online users/i, function(msg) {  
-    
-    var promise;
-    promise = robot.adapter.callMethod('botRequest', 'onlineNames');
-    return promise.then(function(result) {
-      var names;
+  robot.respond(/list online users/i, (msg) => {
+    var promise = robot.adapter.callMethod('botRequest', 'onlineNames')
+    return promise.then(function (result) {
+      var names
       if (result.length > 0) {
-        names = result.join(', ').replace(/,(?=[^,]*$)/, ' and ');
-        msg.send(names + " " + (result.length === 1 ? 'is' : 'are') + " currently online");
+        names = result.join(', ').replace(/,(?=[^,]*$)/, ' and ')
+        msg.send(names + ' ' + (result.length === 1 ? 'is' : 'are') + ' currently online')
       } else {
-        msg.send("Nobody is currently online... \*cricket sound\*");
+        msg.send('Nobody is currently online... *cricket sound*')
       }
-    }, function(error) {
-      msg.send("Uh, sorry I don't know, something's not working");
-    });
-  });
+    }).catch(err => console.error(err))
+  })
 
-};
+  robot.respond(/(what time is it|what's the time)/gi, (res) => {
+    const d = new Date()
+    const t = `${d.getHours()}:${d.getMinutes()} and ${d.getSeconds()} seconds`
+    res.reply(`It's ${t}`)
+  })
+}
