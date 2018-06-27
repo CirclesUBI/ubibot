@@ -22,9 +22,8 @@ function _userHasRole (robot, msg, role) {
 }
 
 module.exports = (robot) => {
-
   robot.hear(/!userid/i, (msg) => {
-     msg.reply('Your User ID is: '+msg.message.user.id)
+    msg.reply('Your User ID is: ' + msg.message.user.id)
   })
 
   // add new users to hubot-brain
@@ -44,7 +43,7 @@ module.exports = (robot) => {
           fullName: rocketChatUsers[i].name
         })
         user.room = 'ubibot'
-        user.roomID = 'SY4jj8WuK8sR7NqNJ' // this is the id of the ubibot room
+        user.roomID = 'dX9MFm7DBvfJHJggq' // this is the id of the ubibot room
         addedUsers.push(user)
         msg.send(addedUsers.length + ' Users added to brain')
       }

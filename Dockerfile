@@ -22,4 +22,5 @@ ENV BOT_NAME "ubibot"
 ENV BOT_OWNER "ed@joincircles.net" 	
 ENV BOT_DESC "CirclesUBI bot" 
 
-CMD ./bin/hubot -a rocketchat
+CMD npm install $(node -e "console.log('$EXTERNAL_SCRIPTS'.split(',').join(' '))") && \
+  ./bin/hubot -a rocketchat
