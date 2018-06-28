@@ -16,8 +16,8 @@
     "shell": "node -r dotenv/config node_modules/hubot/bin/hubot.js -a shell",
     "local": "node -r dotenv/config node_modules/hubot/bin/hubot.js -a rocketchat"
   },
-  "dependencies": {
-    "coffeescript": "^2.3.1",
+  "dependencies": {    
+    "coffee-script": "^1.12.6",
     "guid": "^0.0.12",
     "hubot": "^3",
     "hubot-auth": "^2.1.0",
