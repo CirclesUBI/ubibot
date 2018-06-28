@@ -20,7 +20,7 @@
     "coffee-script": "^1.12.6",
     "guid": "^0.0.12",
     "hubot": "^3",
-    "hubot-auth": "^2.1.0",
+    "hubot-auth-persistent": "^2.2.0",
     "hubot-conversation": "^1.1.1",
     "hubot-diagnostics": "^0.0.2",
     "hubot-dynamic-conversation": "git+https://github.com/edzillion/hubot-dynamic-conversation.git",
