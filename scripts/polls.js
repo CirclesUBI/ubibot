@@ -24,16 +24,13 @@
 //    ubibot veto poll - Vetoes a passed poll
 //
 // Author:
-//   edzillion@joincircles.net
+//   ed@joincircles.net
 
 'use strict'
 
 const DynamicConversation = require('hubot-dynamic-conversation')
-
 const Schedule = require('node-schedule')
-
 const Moment = require('moment')
-
 const Guid = require('guid')
 
 const pollTitlePosition = 0
@@ -52,6 +49,7 @@ const pollingInterval = {amount: '24', type: 'hours'}
 const vetoTerm = {amount: '2', type: 'days'}
 const remindTime = {amount: '2', type: 'days'}
 
+// conversation model for confirming things
 const confirmConversationModel = {
   abortKeyword: 'quit',
   onAbortMessage: 'You have cancelled this conversation.',
@@ -90,6 +88,7 @@ const confirmConversationModel = {
   ]
 }
 
+// conversation model for inputting polls
 const pollConversationModel = {
   abortKeyword: 'quit',
   onAbortMessage: 'You have cancelled the poll.',
@@ -164,7 +163,7 @@ const pollConversationModel = {
       error: "Sorry your response didn't contain any text, please describe the poll."
     },
     {
-      question: 'Optionally add a link to further information: (not required)',
+      question: 'Optionally add a link to further information in PDF form: (not required)',
       answer: {
         type: 'text'
       },
@@ -224,6 +223,7 @@ const pollConversationModel = {
   ]
 }
 
+// conversation model for confirming polls
 const pollConfirmConversationModel = {
   abortKeyword: 'quit',
   onAbortMessage: 'You have cancelled the poll.',
@@ -265,6 +265,7 @@ const pollConfirmConversationModel = {
   ]
 }
 
+// conversation model for vetoing polls
 const vetoConfirmConversationModel = {
   abortKeyword: 'quit',
   onAbortMessage: 'You have cancelled this conversation.',
@@ -373,6 +374,7 @@ module.exports = (robot) => {
         let vote = poll.votes[userId]
         if (isNaN(vote)) {
           let dUserId = vote
+          // we need to check if a person has delegated a vote to someone who delegated to them
           if (_isCircularDelegation(dUserId, undefined, poll.votes)) {
             if (!poll.circDelegates) {
               poll.circDelegates = [userId]
@@ -385,7 +387,11 @@ module.exports = (robot) => {
               nextPassRequired = false
               // if the delegatee hasn't voted then it's counted absent
               if (!poll.votes[dUserId]) {
-                if (!poll.absentDelegates) { poll.absentDelegates = [userId] } else { poll.absentDelegates.push(userId) }
+                if (!poll.absentDelegates) {
+                  poll.absentDelegates = [userId]
+                } else {
+                  poll.absentDelegates.push(userId)
+                }
               } else {
                 let dUserVote = poll.votes[dUserId]
                 if (isNaN(dUserVote)) {
@@ -415,6 +421,7 @@ module.exports = (robot) => {
         p.status = 'Circular Delegation'
         poll.results.votes['A'].count++
       }
+
       for (let i in poll.absentDelegates) {
         let userId = poll.absentDelegates[i]
         let user = robot.brain.userForId(userId)
@@ -425,12 +432,14 @@ module.exports = (robot) => {
         poll.results.votes['A'].count++
       }
 
+      // object for storing votes for various choices
       let pollCounts = {}
       Object.keys(poll.votes).forEach((userId, key, _array) => {
         let num = poll.votes[userId]
         if (num !== undefined) { pollCounts[num] = pollCounts[num] ? pollCounts[num] + 1 : 1 }
       })
 
+      // we will remove everyone that has voted and end up with the non voters
       let nonVoters = poll.participants.slice()
       console.log('all voters:', nonVoters)
 
@@ -451,8 +460,10 @@ module.exports = (robot) => {
         }
         console.log(user.name + ' set absent ' + userId)
       }
+
       poll.results.votes['A'].count += nonVoters.length
 
+      // now we need to determine the winner
       if (poll.type === 'choice') {
         for (let i = 0; i < poll.numOptions; i++) {
           let letter = poll.letters[i]
@@ -473,14 +484,19 @@ module.exports = (robot) => {
         }
         if (poll.results.draw.length > 0)poll.results.winner = null
 
+        // if we have a winner we might be able to close early
+        // if the poll scope is full then we've definitely ended
         if (poll.scope === 'full' || poll.results.winner) {
           poll.closed = true
           poll.passed = true
           poll.status = (poll.scope === 'full') ? 'Complete' : 'Choice reached early'
           if (poll.reminderSchedule) { poll.reminderSchedule.cancel() }
         } else {
+          // it's not a full poll and we don't have a winner yet
           let now = Moment()
+          console.log('poll now: ' + now)
           poll.endTime = Moment(poll.endTime)
+          console.log('poll end ' + poll.endTime)
           if (poll.endTime.isBefore(now)) {
             poll.closed = true
             poll.passed = false
@@ -531,6 +547,7 @@ module.exports = (robot) => {
               poll.schedule = Schedule.scheduleJob(poll.endTime.toDate(), function (pollId) {
                 _endPoll(pollId)
               }.bind(null, poll.pollId))
+              console.log(poll.schedule.scheduledJobs)
               poll.closed = false
               poll.status = 'Ongoing'
             }
@@ -603,6 +620,19 @@ module.exports = (robot) => {
     return _isCircularDelegation(vote, parents, votes)
   }
 
+  function _isPDFExtension (url) {
+    // this removes the anchor at the end, if there is one
+    url = url.substring(0, (url.indexOf('#') === -1) ? url.length : url.indexOf('#'))
+    // this removes the query after the file name, if there is one
+    url = url.substring(0, (url.indexOf('?') === -1) ? url.length : url.indexOf('?'))
+    // this removes everything before the last slash in the path
+    url = url.substring(url.lastIndexOf('/') + 1, url.length)
+    // this removes everything before the file extension
+    let fileExtension = url.substring(url.lastIndexOf('.') + 1, url.length)
+
+    return fileExtension === 'pdf'
+  }
+
   var conversation = new DynamicConversation(robot)
 
   robot.respond(/start a poll/i, function (msg) {
@@ -615,7 +645,7 @@ module.exports = (robot) => {
       }
       if (pollDialog.data.aborted) return console.log('poll aborted')
 
-      // msg.reply("Thanks for using ubibot! I'm always here to help.");
+      // fetch dialogData and populate pollData object
       let dialogData = pollDialog.fetch()
       let pollData = {
         title: _capitalizeFirstLetter(dialogData.answers[pollTitlePosition].response.value),
@@ -631,6 +661,7 @@ module.exports = (robot) => {
         status: 'Active'
       }
 
+      // full poll means core team are all participants
       if (pollData.scope === 'full') {
         if (!pollData.participants) pollData.participants = []
         let users = robot.auth.usersWithRole('core')
@@ -638,12 +669,15 @@ module.exports = (robot) => {
           let user = robot.brain.userForName(users[i])
           pollData.participants.push(user.id)
         }
-      } else {
+      } else { // participants will be added when they vote
         pollData.participants = []
       }
 
       pollData.pollLink = (dialogData.answers[pollLinkPosition].response.value.toLowerCase() === 'skip') ? null : dialogData.answers[pollLinkPosition].response.value
 
+      // add the poll options to the poll
+      // polls are listed by number, poll choices always by letter
+      // .letters[] will store the choices
       if (pollData.type === 'choice') {
         pollData.numOptions = Number(dialogData.answers[pollNumOptionsPosition].response.value)
         for (let i = 0; i < pollData.numOptions; i++) {
@@ -659,10 +693,12 @@ module.exports = (robot) => {
         pollData.letters = ['N', 'Y', 'I']
         pollData.numOptions = 3
       }
-
+      console.log('Calc endTime: now:' + Moment().format() + ', ' + pollingTerm.amount + ' ' + pollingTerm.type)
       pollData.endTime = Moment().add(pollingTerm.amount, pollingTerm.type)
       pollData.pollId = 'poll:' + Guid.create()
+      console.log('endTime:' + pollData.endTime.format())
 
+      // prepare text for poll confirm interaction
       let draftPollNum = (pollList) ? pollList.length : 0
       let pollMessage = 'Poll #' + draftPollNum + ' - draft:\n'
       pollMessage += 'Title: ' + pollData.title + ' (' + pollData.type.toUpperCase() + ')\n'
@@ -683,6 +719,7 @@ module.exports = (robot) => {
         let dialogData = confirmDialog.fetch()
         let answer = dialogData.answers[0].response.value.toUpperCase()
         if (answer === 'Y') {
+          // get user records from brain
           var user = robot.brain.userForId(msg.message.user.id)
           if (!user.polls) {
             user.polls = {}
@@ -697,11 +734,12 @@ module.exports = (robot) => {
             pollData.pollNum = pollList.length - 1
           }
           robot.brain.set('polls', pollList)
-
+          
           pollData.schedule = Schedule.scheduleJob(pollData.endTime.toDate(), function (pollId) {
             _endPoll(pollId)
           }.bind(null, pollData.pollId))
 
+          // todo: this section needs work
           if (pollData.scope === 'full') {
             let reminder = pollData.endTime.subtract(remindTime.amount, remindTime.type)
             pollData.reminderSchedule = Schedule.scheduleJob(reminder.toDate(), function (pollId) {
@@ -722,6 +760,7 @@ module.exports = (robot) => {
           }
 
           pollData.startTime = Moment()
+          console.log('poll start time:' + pollData.startTime)
 
           robot.brain.set(pollData.pollId, pollData)
           return _startPoll(pollData.pollId)
@@ -748,6 +787,7 @@ module.exports = (robot) => {
       return msg.reply('Poll ' + poll.pollNum + ' closed. Status: ' + poll.status)
     }
 
+    // if the user calling this function is the proposer of said poll
     if (poll.proposer === callerUser.id) {
       conversation.start(msg, confirmConversationModel, (err, msg, confirmDialog) => {
         if (err) console.error(err)
@@ -773,6 +813,7 @@ module.exports = (robot) => {
     let vote = msg.match[1].toUpperCase()
     let pollIndex = msg.match[2]
     let poll = robot.brain.get(pollList[pollIndex])
+    // we need to get the callerUser's user record so we can update it with this vote
     let callerUser = robot.brain.userForId(msg.message.user.id)
 
     if (!poll) {
@@ -792,16 +833,19 @@ module.exports = (robot) => {
 
     if (voteIndex < 0 || voteIndex >= poll.numOptions) return msg.reply('No poll option ' + vote)
 
-    msg.reply('You have voted ' + vote + ' on poll ' + msg.match[2] + ':' + poll.title)
+    msg.reply('You have voted ' + vote + ' on poll ' + msg.match[2] + ': ' + poll.title)
     poll.votes[callerUser.id] = voteIndex
 
     if (!callerUser.polls) callerUser.polls = {}
 
     callerUser.polls[poll.pollId] = {vote: voteIndex}
+
+    // if it's a partial vote we need to extend the deadline by 24 hours
     if (poll.scope === 'partial' || poll.scope === 'part') {
       poll.participants.push(callerUser.id)
       if (Object.keys(poll.votes).length > 1) {
         let newEndDate = Moment().add(pollingInterval.amount, pollingInterval.type).toDate()
+        console.log('newEndDate:' + newEndDate)
         let success = poll.schedule.reschedule(newEndDate)
         if (success) {
           return msg.reply('Poll #' + poll.pollNum + ' will be closed if quorum is reached in ' + pollingInterval.amount + ' ' + pollingInterval.type)
@@ -834,6 +878,7 @@ module.exports = (robot) => {
     let voteIndex = poll.letters.indexOf(vote)
     if (voteIndex < 0 || voteIndex >= poll.numOptions) return msg.reply('No poll option ' + vote)
 
+    // add vote records to user and poll
     poll.votes[callerUser.id] = voteIndex
     callerUser.polls[poll.pollId] = {vote: voteIndex}
 
@@ -849,7 +894,6 @@ module.exports = (robot) => {
     if (pollList === undefined) return msg.reply('No polls underway.')
     let delegateUsername = msg.match[2]
     let dUser = robot.brain.userForName(delegateUsername)
-    console.log(dUser)
     if (dUser === undefined || dUser === null) return msg.reply('No username: ' + delegateUsername + '. Have you spelled it correctly?')
 
     let pollIndex = msg.match[1]
@@ -868,10 +912,12 @@ module.exports = (robot) => {
       return msg.reply('You have already voted on this poll\n' + "Use command 'change delegate vote on poll [1] to [username]' to change your vote")
     }
 
+    // a delegated vote stores ther delagated userid instead of a vote
     poll.votes[callerUser.id] = dUser.id
     if (!callerUser.polls) callerUser.polls = {}
     callerUser.polls[poll.pollId] = {vote: dUser.id}
 
+    // if it's a partial vote we need to extend the deadline by 24 hours
     if (poll.scope === 'partial' || poll.scope === 'part') {
       poll.participants.push(callerUser.id)
       if (Object.keys(poll.votes).length > 1) {
@@ -911,6 +957,7 @@ module.exports = (robot) => {
 
     if (!poll.votes || poll.votes[callerUser.id] === undefined) return msg.reply('No vote to change. You have never voted on this poll')
 
+    // a delegated vote stores ther delagated userid instead of a vote
     poll.votes[callerUser.id] = dUser.id
     if (!callerUser.polls) callerUser.polls = {}
     callerUser.polls[poll.pollId] = {vote: dUser.id}
@@ -966,6 +1013,7 @@ module.exports = (robot) => {
           vetoText += 'Reason: ' + reason
         }
 
+        // notify poll participants that the vote has been vetoed
         let pollParticipants = poll.participants
         console.log('sending poll ' + poll.pollNum + ' veto to:' + pollParticipants)
         for (let i = 0; i < pollParticipants.length; i++) {
@@ -1093,6 +1141,7 @@ module.exports = (robot) => {
     if (poll.closed) {
       replyString += 'Poll has already closed\n'
 
+      // might as well tell user what he voted on the poll
       if (callerUser.polls && callerUser.polls[poll.pollId]) {
         let p = callerUser.polls[poll.pollId]
         if (p.vote === 'A') {
@@ -1126,7 +1175,7 @@ module.exports = (robot) => {
         if (poll.vetoReason) replyString += 'Reason: ' + poll.vetoReason
       }
       replyString += (poll.passed) ? '*This poll PASSED and is in effect*' : '*This poll FAILED and has been discarded*'
-    } else {
+    } else { // poll is still open
       if (poll.votes[callerUserId] !== undefined) {
         let vote = poll.votes[callerUserId]
         replyString += 'You have previously voted on this poll.' + '\n'
@@ -1148,12 +1197,14 @@ module.exports = (robot) => {
     return msg.reply(replyString)
   })
 
+  // audit poll is an unlisted function. It is only accessible by admins as voting is private.
+  // this function will only be run on a consensus decision by the core team.
   robot.respond(/audit poll ([0-9]{1,2})/i, (msg) => {
     let callerUserId = msg.message.user.id
     console.log('userForId', callerUserId)
     // let callerUser = robot.brain.userForId(callerUserId)
 
-    if (!_userHasRole(msg, 'core')) return
+    if (!_userHasRole(msg, 'admin')) return
 
     let pollList = robot.brain.get('polls')
 
@@ -1240,6 +1291,7 @@ module.exports = (robot) => {
     return msg.reply(replyString)
   })
 
+  // todo: there must be a better way to do this
   robot.respond(/polls help/i, (msg) => {
     let helpText = 'List of commands:\n'
     helpText += '(note: ubibot can be used either publicly in his channel #ubibot, or privately by direct messaging him)\n'
@@ -1275,12 +1327,15 @@ module.exports = (robot) => {
     helpText += 'Users have ' + vetoTerm.amount + ' ' + vetoTerm.type + ' to veto a poll. All vetoes are public.\n'
     helpText += '\n'
     helpText += 'All ubibot and polling code available here: https://github.com/CirclesUBI/ubibot\n'
-    helpText += 'Get in touch with @edzillion for any comments or suggestions.'
+    helpText += 'Get in touch with edzillion for any comments or suggestions.'
 
     return msg.reply(helpText)
   })
 
   // ADMIN ONLY COMMANDS
+
+  // this is needed because schedules are lost on reboot.
+  // todo: automate this
   robot.respond(/reset poll schedules/i, (msg) => {
     if (!_userHasRole(msg, 'admin')) return
 
