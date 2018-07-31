@@ -750,7 +750,8 @@ module.exports = (robot) => {
           }
 
           pollData.startTime = Moment()
-          console.log(Moment.format())
+          let now = Moment()
+          console.log(now)
           console.log('poll start time:' + pollData.startTime)
 
           robot.brain.set(pollData.pollId, pollData)
