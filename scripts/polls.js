@@ -482,7 +482,7 @@ module.exports = (robot) => {
             if (poll.results.winner.choice !== null && poll.results.draw.indexOf(num) === -1) poll.results.draw.push(num)
           }
         }
-        if (poll.results.draw.length > 0)poll.results.winner = null
+        if (poll.results.draw.length > 0) poll.results.winner = null
 
         // if we have a winner we might be able to close early
         // if the poll scope is full then we've definitely ended
@@ -519,8 +519,9 @@ module.exports = (robot) => {
           poll.results.votes[i] = {choice: pollChoice, count: voteCount, letter: letter}
         }
 
+        // GO THROUGH WITH FULL AND NOT
         let yesVotes = poll.results.votes['1'].count
-        let noVotes = (poll.scope === 'full') ? poll.results.votes['0'].count + poll.results.votes['A'].count : poll.results.votes['0'].count
+        let noVotes = poll.results.votes['0'].count
         if (yesVotes >= 2 && yesVotes / 2 >= noVotes) {
           poll.results.winner = poll.results.votes['1']
           poll.closed = true
@@ -528,11 +529,12 @@ module.exports = (robot) => {
           poll.status = (poll.scope === 'full') ? 'Complete' : 'Quorum reached early'
         } else {
           if (poll.scope === 'full') {
-            poll.results.winner = {choice: 'No or Absent', count: noVotes, letter: 'NA'}
+            poll.results.winner = {choice: 'No', count: noVotes, letter: 'N'}
             poll.closed = true
             poll.passed = false
             poll.status = 'Complete'
             if (poll.reminderSchedule) poll.reminderSchedule.cancel()
+            console.log('poll.reminderSchedule cancelled')
           } else {
             poll.results.winner = poll.results.votes['0']
             let now = Moment()
@@ -547,6 +549,7 @@ module.exports = (robot) => {
               poll.schedule = Schedule.scheduleJob(poll.endTime.toDate(), function (pollId) {
                 _endPoll(pollId)
               }.bind(null, poll.pollId))
+              console.log('poll.schedule extended to ' + poll.endTime + ', now: ' + now)
               console.log(poll.schedule.scheduledJobs)
               poll.closed = false
               poll.status = 'Ongoing'
