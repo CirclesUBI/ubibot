@@ -567,6 +567,248 @@ module.exports = (robot) => {
     if (poll.closed) _announcePollEnd(pollId)
   }
 
+  function _fakeEndPoll (pollId) {
+    let poll = robot.brain.get(pollId)
+
+    if (poll === undefined) console.log('Error: poll not found in brain: ' + pollId)
+
+    poll.results = {}
+    poll.results.votes = {}
+    poll.results.votes['A'] = {choice: 'Absent', count: 0, letter: 'A'}
+    poll.results.draw = []
+
+    if (poll.votes !== undefined) {
+      Object.keys(poll.votes).forEach((userId) => {
+        let vote = poll.votes[userId]
+        if (isNaN(vote)) {
+          let dUserId = vote
+          // we need to check if a person has delegated a vote to someone who delegated to them
+          if (_isCircularDelegation(dUserId, undefined, poll.votes)) {
+            if (!poll.circDelegates) {
+              poll.circDelegates = [userId]
+            } else {
+              poll.circDelegates.push(userId)
+            }
+          } else {
+            let nextPassRequired
+            do {
+              nextPassRequired = false
+              // if the delegatee hasn't voted then it's counted absent
+              if (!poll.votes[dUserId]) {
+                if (!poll.absentDelegates) {
+                  poll.absentDelegates = [userId]
+                } else {
+                  poll.absentDelegates.push(userId)
+                }
+              } else {
+                let dUserVote = poll.votes[dUserId]
+                if (isNaN(dUserVote)) {
+                  dUserId = dUserVote
+                  nextPassRequired = true
+                  return
+                }
+                poll.votes[userId] = dUserVote
+                let user = robot.brain.userForId(userId)
+                let p = user.polls[poll.pollId]
+                p.origVote = p.vote
+                p.vote = dUserVote
+                p.status = 'Delegated'
+              }
+            }
+            while (nextPassRequired === true)
+          }
+        }
+      })
+
+      for (let i in poll.circDelegates) {
+        let userId = poll.circDelegates[i]
+        let user = robot.brain.userForId(userId)
+        let p = user.polls[poll.pollId]
+        p.origVote = p.vote
+        p.vote = 'A'
+        p.status = 'Circular Delegation'
+        poll.results.votes['A'].count++
+      }
+
+      for (let i in poll.absentDelegates) {
+        let userId = poll.absentDelegates[i]
+        let user = robot.brain.userForId(userId)
+        let p = user.polls[poll.pollId]
+        p.origVote = p.vote
+        p.vote = 'A'
+        p.status = 'Delegate Absent'
+        poll.results.votes['A'].count++
+      }
+
+      // object for storing votes for various choices
+      let pollCounts = {}
+      Object.keys(poll.votes).forEach((userId, key, _array) => {
+        let num = poll.votes[userId]
+        if (num !== undefined) { pollCounts[num] = pollCounts[num] ? pollCounts[num] + 1 : 1 }
+      })
+
+      // we will remove everyone that has voted and end up with the non voters
+      let nonVoters = poll.participants.slice()
+      console.log('all voters:', nonVoters)
+
+      for (const userId of Object.keys(poll.votes)) {
+        let i = nonVoters.indexOf(userId)
+        nonVoters.splice(i, 1)
+        console.log(userId + ' voted')
+      }
+
+      for (let i = 0; i < nonVoters.length; i++) {
+        let userId = nonVoters[i]
+        console.log('userForId', userId)
+        let user = robot.brain.userForId(userId)
+        if (!user.polls) user.polls = {}
+        user.polls[poll.pollId] = {
+          vote: 'A',
+          status: 'Absence'
+        }
+        console.log(user.name + ' set absent ' + userId)
+      }
+
+      poll.results.votes['A'].count += nonVoters.length
+
+      // now we need to determine the winner
+      if (poll.type === 'choice') {
+        for (let i = 0; i < poll.numOptions; i++) {
+          let letter = poll.letters[i]
+          let pollChoice = poll.choices[i]
+          let voteCount = pollCounts[i] || 0
+          poll.results.votes[i] = {choice: pollChoice, count: voteCount, letter: letter}
+
+          if (!poll.results.winner) {
+            poll.results.winner = Object.assign({}, poll.results.votes[i])
+          } else if (voteCount > poll.results.winner.count) {
+            poll.results.winner = Object.assign({}, poll.results.votes[i])
+            poll.results.draw = []
+          } else if (voteCount === poll.results.winner.count) {
+            poll.results.draw.push(i)
+            let num = poll.letters.indexOf(poll.results.winner.letter)
+            if (poll.results.winner.choice !== null && poll.results.draw.indexOf(num) === -1) poll.results.draw.push(num)
+          }
+        }
+        if (poll.results.draw.length > 0) poll.results.winner = null
+
+        // if we have a winner we might be able to close early
+        // if the poll scope is full then we've definitely ended
+        if (poll.scope === 'full' || poll.results.winner) {
+          poll.closed = true
+          poll.passed = true
+          poll.status = (poll.scope === 'full') ? 'Complete' : 'Choice reached early'
+          if (poll.reminderSchedule) { poll.reminderSchedule.cancel() }
+        } else {
+          // it's not a full poll and we don't have a winner yet
+          let now = Moment()
+          console.log('poll now: ' + now)
+          poll.endTime = Moment(poll.endTime)
+          console.log('poll end ' + poll.endTime)
+          if (poll.endTime.isBefore(now)) {
+            poll.closed = true
+            poll.passed = false
+            poll.status = 'Ended without clear choice'
+          } else {
+            // set to _endPoll() at the original endtime. this will be interrupted by any votes cast
+            console.log('no quorum reached, extending to endTime')
+            poll.schedule = Schedule.scheduleJob(poll.endTime.toDate(), function (pollId) {
+              _fakeEndPoll(pollId)
+            }.bind(null, poll.pollId))
+            poll.closed = false
+            poll.status = 'Ongoing'
+          }
+        }
+      } else if (poll.type === 'proposal' || poll.type === 'prop') {
+        for (let i = 0; i < poll.numOptions; i++) {
+          let letter = poll.letters[i]
+          let pollChoice = poll.choices[i]
+          let voteCount = pollCounts[i] || 0
+          poll.results.votes[i] = {choice: pollChoice, count: voteCount, letter: letter}
+        }
+
+        let yesVotes = poll.results.votes['1'].count
+        let noVotes = poll.results.votes['0'].count
+        if (yesVotes >= 2 && yesVotes / 2 >= noVotes) {
+          poll.results.winner = poll.results.votes['1']
+          poll.closed = true
+          poll.passed = true
+          poll.status = (poll.scope === 'full') ? 'Complete' : 'Quorum reached early'
+        } else {
+          if (poll.scope === 'full') {
+            poll.results.winner = {choice: 'No', count: noVotes, letter: 'N'}
+            poll.closed = true
+            poll.passed = false
+            poll.status = 'Complete'
+            if (poll.reminderSchedule) poll.reminderSchedule.cancel()
+            console.log('poll.reminderSchedule cancelled')
+          } else {
+            poll.results.winner = poll.results.votes['0']
+            let now = Moment()
+            poll.endTime = Moment(poll.endTime)
+            if (poll.endTime.isBefore(now)) {
+              poll.closed = true
+              poll.passsed = false
+              poll.status = 'Ended without quorum'
+            } else {
+              // set to _endPoll() at the original endtime. this will be interrupted by any votes cast
+              console.log('no quorum reached, extending to endTime')
+              poll.schedule = Schedule.scheduleJob(poll.endTime.toDate(), function (pollId) {
+                _endPoll(pollId)
+              }.bind(null, poll.pollId))
+              console.log('poll.schedule extended to ' + poll.endTime + ', now: ' + now)
+              console.log(poll.schedule.scheduledJobs)
+              poll.closed = false
+              poll.status = 'Ongoing'
+            }
+          }
+        }
+      }
+    } else {
+      poll.results.winner = {choice: 'No Votes Cast', count: 0, letter: 'NV'}
+      poll.closed = true
+      poll.passed = false
+      poll.status = 'Not enough voters'
+    }
+
+    if (poll.closed) _fakeAnnouncePollEnd(pollId)
+  }
+
+  function _fakeAnnouncePollEnd (pollId) {
+    let poll = robot.brain.get(pollId)
+    if (poll === undefined) return console.log('Error: poll not found in brain: ' + pollId)
+
+    let resultText = '*Poll #' + (poll.pollNum) + ' complete!*\n'
+
+    if (poll.votes === undefined) {
+      resultText += 'Poll FAILED, no votes cast'
+    } else {
+      resultText += 'Vote Tally:\n'
+
+      for (let i = 0; i < poll.numOptions; i++) {
+        let letter = poll.letters[i]
+        resultText += poll.results.votes[i].count + ' votes for ' + letter + ': ' + poll.results.votes[i].choice + '\n'
+      }
+      if (poll.results.votes['A']) resultText += poll.results.votes['A'].count + ' votes marked A: Absent\n'
+
+      if (poll.type === 'choice') {
+        if (poll.results.draw.length > 0) {
+          resultText += 'Result: DRAW - no clear winner'
+        } else {
+          resultText += 'Result: WIN - option ' + poll.results.winner.letter + ' with ' + poll.results.winner.count + ' votes'
+        }
+      } else if (poll.type === 'proposal' || poll.type === 'prop') {
+        if (poll.results.winner.letter === 'Y') {
+          resultText += 'Result: PASSED - quorum reached for Y with ' + poll.results.winner.count + ' votes'
+        } else {
+          resultText += 'Result: FAILED - no quorum with ' + poll.results.winner.count + ' votes for:' + poll.results.winner.letter
+        }
+      }
+    }
+    let targetUser = robot.brain.userForId('zgfuB2P5P2ErF6Nyr')
+    robot.adapter.sendDirect({user: targetUser}, resultText)
+  }
+
   function _announcePollEnd (pollId) {
     let poll = robot.brain.get(pollId)
     if (poll === undefined) return console.log('Error: poll not found in brain: ' + pollId)
@@ -1318,6 +1560,7 @@ module.exports = (robot) => {
     helpText += 'Users have ' + vetoTerm.amount + ' ' + vetoTerm.type + ' to veto a poll. All vetoes are public.\n'
     helpText += '\n'
     helpText += 'All ubibot and polling code available here: https://github.com/CirclesUBI/ubibot\n'
+    helpText += 'Voting Principles & Rules here: https://goo.gl/78arzD\n'
     helpText += 'Get in touch with edzillion for any comments or suggestions.'
 
     return msg.reply(helpText)
@@ -1340,11 +1583,18 @@ module.exports = (robot) => {
       if (!poll) console.log('No poll number ' + msg.match[1] + ' while updating schedules')
 
       poll.endTime = Moment(poll.endTime)
-      if (!poll.closed && poll.endTime.isAfter(now)) {
-        replyString += 'Setting schedule on poll number ' + poll.pollNum + ' status: ' + poll.status + '\n'
-        poll.schedule = Schedule.scheduleJob(poll.endTime.toDate(), function (pollId) {
-          _endPoll(pollId)
-        }.bind(null, poll.pollId))
+      if (!poll.closed) {
+        if (poll.endTime.isAfter(now)) {
+          replyString += 'Setting schedule on poll number ' + poll.pollNum + ' status: ' + poll.status + '\n'
+          poll.schedule = Schedule.scheduleJob(poll.endTime.toDate(), function (pollId) {
+            _endPoll(pollId)
+          }.bind(null, poll.pollId))
+        } else {
+          // this poll is not closed but it ended in the past. end it now.
+          console.log('poll ' + poll.pollNum + ' needs to be ended as it closed in the past')
+          _fakeEndPoll(poll.id)
+          replyString += 'Ending poll number ' + poll.pollNum + ' status: ' + poll.status + '\n'
+        }
       } else {
         replyString += 'Skipping poll number ' + poll.pollNum + ' status: ' + poll.status + '\n'
       }
@@ -1370,6 +1620,22 @@ module.exports = (robot) => {
           }.bind(null, poll.pollId))
         }
       }
+    }
+    return msg.reply(replyString)
+  })
+
+  robot.respond(/show schedules/i, (msg) => {
+    if (!_userHasRole(msg, 'admin')) return
+
+    let pollList = robot.brain.get('polls')
+    if (!pollList) return msg.reply('No polls underway.')
+
+    let replyString = ''
+    for (let i = 0; i < pollList.length; i++) {
+      let poll = robot.brain.get(pollList[i])
+      if (!poll) console.log('No poll number ' + msg.match[1] + ' while updating schedules')
+
+      if (poll.schedule) replyString += '(' + i + ') ' + poll.schedule + '\n'
     }
     return msg.reply(replyString)
   })
