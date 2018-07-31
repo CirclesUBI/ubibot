@@ -567,11 +567,8 @@ module.exports = (robot) => {
     if (poll.closed) _announcePollEnd(pollId)
   }
 
-  function _fakeEndPoll (pollId) {
-    let poll = robot.brain.get(pollId)
-
-    if (poll === undefined) console.log('Error: poll not found in brain: ' + pollId)
-    // console.log(poll)
+  function _fakeEndPoll (poll) {
+    if (poll === undefined) console.log('Error: poll not found')
     poll.results = {}
     poll.results.votes = {}
     poll.results.votes['A'] = {choice: 'Absent', count: 0, letter: 'A'}
@@ -771,12 +768,11 @@ module.exports = (robot) => {
       poll.status = 'Not enough voters'
     }
 
-    if (poll.closed) _fakeAnnouncePollEnd(pollId)
+    if (poll.closed) _fakeAnnouncePollEnd(poll)
   }
 
-  function _fakeAnnouncePollEnd (pollId) {
-    let poll = robot.brain.get(pollId)
-    if (poll === undefined) return console.log('Error: poll not found in brain: ' + pollId)
+  function _fakeAnnouncePollEnd (poll) {
+    if (poll === undefined) return console.log('Error: poll not found')
 
     let resultText = '*Poll #' + (poll.pollNum) + ' complete!*\n'
 
@@ -1592,8 +1588,7 @@ module.exports = (robot) => {
         } else {
           // this poll is not closed but it ended in the past. end it now.
           console.log('poll ' + poll.pollNum + ' needs to be ended as it closed in the past')
-          console.log(poll)
-          _fakeEndPoll(poll.id)
+          _fakeEndPoll(poll)
           replyString += 'Ending poll number ' + poll.pollNum + ' status: ' + poll.status + '\n'
         }
       } else {
