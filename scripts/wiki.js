@@ -4,18 +4,10 @@
 // Commands:
 //    ???
 
-async function status (workingDir) {
-  const git = require('simple-git/promise')
-
-  let statusSummary = null
-  try {
-    statusSummary = await git(workingDir).status()
-  } catch (e) {
-    // handle the error
-  }
-
-  return statusSummary
-}
+const fs = require('fs')
+const path = require('path')
+const rootFolder = path.resolve(__dirname, '..', '..')
+const git = require('simple-git/promise')(rootFolder)
 
 function _userHasRole (robot, msg, role) {
   robot.logger.info('Checking if user: ' + msg.message.user.name + ' has role ' + role)
@@ -35,7 +27,23 @@ function _userHasRole (robot, msg, role) {
 module.exports = (robot) => {
   robot.respond(/wiki test/i, (msg) => {
     if (!_userHasRole(robot, msg, 'admin')) return
+    const gitP = require('simple-git/promise')
 
-    msg.reply('statusSummary: ' + status('../'))
+    gitP().env({ ...process.env })
+      .status(status => console.log(status)
+        .then(status => console.log(status))
+        .catch(err => console.err(err))
+      )
+  })
+
+  robot.respond(/wiki repo/i, (msg) => {
+    if (!_userHasRole(robot, msg, 'admin')) return
+    const repo = 'https://github.com/CirclesUBI/ubibot'
+    const remote = `https://${process.env.GITHUB_USER}:${process.env.GITHUB_PASS}@${repo}`
+
+    git().silent(true)
+      .clone(remote)
+      .then(() => console.log('finished'))
+      .catch((err) => console.error('failed: ', err))
   })
 }

@@ -1393,7 +1393,14 @@ module.exports = (robot) => {
       let poll = robot.brain.get(pollList[i])
       if (!poll) console.log('No poll number ' + msg.match[1] + ' while updating schedules')
 
+      if (typeof poll.schedule !== 'function') continue
+
       if (poll.schedule) replyString += '(' + i + ') ' + poll.schedule + '\n'
+      let txt = 'start: ' + poll.schedule.start + '\n'
+      txt += 'end: ' + poll.schedule.end + '\n'
+      txt += 'sucess: ' + poll.schedule.success
+
+      if (poll.schedule) replyString += '(' + i + ') ' + txt + '\n'
     }
     return msg.reply(replyString.toString())
   })
