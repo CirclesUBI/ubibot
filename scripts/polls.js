@@ -620,19 +620,6 @@ module.exports = (robot) => {
     return _isCircularDelegation(vote, parents, votes)
   }
 
-  function _isPDFExtension (url) {
-    // this removes the anchor at the end, if there is one
-    url = url.substring(0, (url.indexOf('#') === -1) ? url.length : url.indexOf('#'))
-    // this removes the query after the file name, if there is one
-    url = url.substring(0, (url.indexOf('?') === -1) ? url.length : url.indexOf('?'))
-    // this removes everything before the last slash in the path
-    url = url.substring(url.lastIndexOf('/') + 1, url.length)
-    // this removes everything before the file extension
-    let fileExtension = url.substring(url.lastIndexOf('.') + 1, url.length)
-
-    return fileExtension === 'pdf'
-  }
-
   var conversation = new DynamicConversation(robot)
 
   robot.respond(/start a poll/i, function (msg) {
@@ -734,7 +721,7 @@ module.exports = (robot) => {
             pollData.pollNum = pollList.length - 1
           }
           robot.brain.set('polls', pollList)
-          
+
           pollData.schedule = Schedule.scheduleJob(pollData.endTime.toDate(), function (pollId) {
             _endPoll(pollId)
           }.bind(null, pollData.pollId))
@@ -760,6 +747,7 @@ module.exports = (robot) => {
           }
 
           pollData.startTime = Moment()
+          console.log(Moment.format())
           console.log('poll start time:' + pollData.startTime)
 
           robot.brain.set(pollData.pollId, pollData)
