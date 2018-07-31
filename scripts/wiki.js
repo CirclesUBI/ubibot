@@ -7,7 +7,7 @@
 const fs = require('fs')
 const path = require('path')
 const rootFolder = path.resolve(__dirname, '..', '..')
-const git = require('simple-git/promise')(rootFolder)
+
 
 function _userHasRole (robot, msg, role) {
   robot.logger.info('Checking if user: ' + msg.message.user.name + ' has role ' + role)
@@ -38,6 +38,9 @@ module.exports = (robot) => {
 
   robot.respond(/wiki repo/i, (msg) => {
     if (!_userHasRole(robot, msg, 'admin')) return
+
+    const git = require('simple-git/promise')
+
     const repo = 'https://github.com/CirclesUBI/ubibot'
     const remote = `https://${process.env.GITHUB_USER}:${process.env.GITHUB_PASS}@${repo}`
 
