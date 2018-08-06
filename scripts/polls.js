@@ -313,6 +313,8 @@ const vetoConfirmConversationModel = {
 }
 
 module.exports = (robot) => {
+  const config = robot.brain.get('botConfig')
+
   function _userHasRole (msg, role) {
     robot.logger.info('Checking if user: ' + msg.message.user.name + ' has role ' + role)
     let user = robot.brain.userForName(msg.message.user.name)
@@ -348,15 +350,20 @@ module.exports = (robot) => {
     let end = Moment(poll.endTime)
     pollMessage += 'Poll ends ' + end.fromNow()
 
-    // all polls announced to everyone
-    let recipients = robot.auth.usersWithRole('core')
-    console.log('sending poll ' + poll.pollNum + ' announce to:' + recipients)
-    for (let i = 0; i < recipients.length; i++) {
-      let targetUser = robot.brain.userForName(recipients[i])
-      robot.adapter.sendDirect({user: targetUser}, pollMessage)
+    if (config.mode === 'prod') {
+      // all polls announced to everyone
+      let recipients = robot.auth.usersWithRole('core')
+      console.log('sending poll ' + poll.pollNum + ' announce to:' + recipients)
+      for (let i = 0; i < recipients.length; i++) {
+        let targetUser = robot.brain.userForName(recipients[i])
+        robot.adapter.sendDirect({user: targetUser}, pollMessage)
+      }
+      robot.send({room: pollingRoomName}, pollMessage)
+    } else if (config.mode === 'test') {
+      robot.adapter.sendDirect({user: 'zgfuB2P5P2ErF6Nyr'}, pollMessage)
+    } else {
+      console.error('botConfig.mode not set')
     }
-
-    robot.send({room: pollingRoomName}, pollMessage)
   }
 
   function _endPoll (pollId) {
@@ -599,14 +606,19 @@ module.exports = (robot) => {
       }
     }
 
-    let pollParticipants = poll.participants
-    console.log('sending poll ' + poll.pollNum + ' end to:' + pollParticipants)
-    for (let i = 0; i < pollParticipants.length; i++) {
-      let targetUser = robot.brain.userForId(pollParticipants[i])
-      robot.adapter.sendDirect({user: targetUser}, resultText)
+    if (config.mode === 'prod') {
+      let pollParticipants = poll.participants
+      console.log('sending poll ' + poll.pollNum + ' end to:' + pollParticipants)
+      for (let i = 0; i < pollParticipants.length; i++) {
+        let targetUser = robot.brain.userForId(pollParticipants[i])
+        robot.adapter.sendDirect({user: targetUser}, resultText)
+      }
+      robot.send({room: pollingRoomName}, resultText)
+    } else if (config.mode === 'test') {
+      robot.adapter.sendDirect({user: 'zgfuB2P5P2ErF6Nyr'}, resultText)
+    } else {
+      console.error('botConfig.mode not set')
     }
-
-    robot.send({room: pollingRoomName}, resultText)
   }
 
   function _capitalizeFirstLetter (string) {

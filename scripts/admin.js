@@ -21,7 +21,7 @@ module.exports = (robot) => {
     else {
       config.mode = mode
       robot.brain.set('botConfig', config)
-      res.reply('set mode to' + mode)
+      res.reply('mode set to ' + mode)
     }
   })
 }
