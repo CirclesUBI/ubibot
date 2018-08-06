@@ -3,12 +3,13 @@
 //    https://github.com/hubotio/hubot/blob/master/docs/scripting.md#documenting-scripts
 //
 // Commands:
-//    bot what time is it? - Tells you the time
+//    ubibot set mode [test|prod]
 //    bot what's the time? - Tells you the time
 //
 module.exports = (robot) => {
   // get configs from brain
   var config = robot.brain.get('botConfig')
+  console.log('config loaded: ' + config)
   if (!config) {
     config = {
       mode: 'prod' // can also be 'test'
@@ -17,6 +18,7 @@ module.exports = (robot) => {
 
   robot.respond(/set mode (prod|test)/i, (res) => {
     let mode = res.match[1].toLowerCase()
+    console.log('mode: ' + mode)
     if (config.mode === mode) res.reply('already in ' + mode + ' mode')
     else {
       config.mode = mode
