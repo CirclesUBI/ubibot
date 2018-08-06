@@ -16,10 +16,11 @@ module.exports = (robot) => {
         mode: 'prod' // can also be 'test'
       }
     }
+    return config
   }
 
   robot.respond(/set mode (prod|test)/i, (res) => {
-    _initBotConfig()
+    var config = _initBotConfig()
 
     let mode = res.match[1].toLowerCase()
     console.log('mode: ' + mode)
