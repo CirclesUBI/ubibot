@@ -8,7 +8,6 @@ const fs = require('fs')
 const path = require('path')
 const rootFolder = path.resolve(__dirname, '..', '..')
 
-
 function _userHasRole (robot, msg, role) {
   robot.logger.info('Checking if user: ' + msg.message.user.name + ' has role ' + role)
   let user = robot.brain.userForName(msg.message.user.name)

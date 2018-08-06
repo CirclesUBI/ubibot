@@ -1348,6 +1348,7 @@ module.exports = (robot) => {
           poll.schedule = Schedule.scheduleJob(poll.endTime.toDate(), function (pollId) {
             _endPoll(pollId)
           }.bind(null, poll.pollId))
+          poll.schedule.name = 'Poll ' + poll.pollNum + ' _endPoll()'
         } else {
           // this poll is not closed but it ended in the past. end it now.
           console.log('poll ' + poll.pollNum + ' needs to be ended as it closed in the past')
@@ -1355,6 +1356,11 @@ module.exports = (robot) => {
           replyString += 'Ending poll number ' + poll.pollNum + ' status: ' + poll.status + '\n'
         }
       } else {
+        // remove old schedules
+        if (poll.schedule) poll.schedule = undefined
+        // and reminder
+        if (poll.reminderSchedule) poll.reminderSchedule = undefined
+
         replyString += 'Skipping poll number ' + poll.pollNum + ' status: ' + poll.status + '\n'
       }
 
