@@ -348,7 +348,7 @@ module.exports = (robot) => {
     let end = Moment(poll.endTime)
     pollMessage += 'Poll ends ' + end.fromNow()
 
-    const config = robot.brain.get('botConfig')
+    const config = robot.brain.get('botConfig')    
     if (config.mode === 'prod') {
       // all polls announced to everyone
       let recipients = robot.auth.usersWithRole('core')
@@ -359,7 +359,8 @@ module.exports = (robot) => {
       }
       robot.send({room: pollingRoomName}, pollMessage)
     } else if (config.mode === 'test') {
-      robot.adapter.sendDirect({user: 'zgfuB2P5P2ErF6Nyr'}, pollMessage)
+      let ed = robot.brain.get({user: 'zgfuB2P5P2ErF6Nyr'})
+      robot.adapter.sendDirect(ed, pollMessage)
     } else {
       console.error('botConfig.mode not set')
     }
@@ -615,7 +616,8 @@ module.exports = (robot) => {
       }
       robot.send({room: pollingRoomName}, resultText)
     } else if (config.mode === 'test') {
-      robot.adapter.sendDirect({user: 'zgfuB2P5P2ErF6Nyr'}, resultText)
+      let ed = robot.brain.get({user: 'zgfuB2P5P2ErF6Nyr'})
+      robot.adapter.sendDirect(ed, resultText)
     } else {
       console.error('botConfig.mode not set')
     }
