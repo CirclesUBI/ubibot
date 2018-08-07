@@ -798,8 +798,8 @@ module.exports = (robot) => {
     let pollList = robot.brain.get('polls')
     if (pollList === undefined) return msg.reply('No polls underway.')
 
-    let pollId = msg.match[1]
-    let poll = robot.brain.get(pollList[pollId])
+    let pollNumber = msg.match[1]
+    let poll = robot.brain.get(pollList[pollNumber])
     let callerUser = robot.brain.userForId(msg.message.user.id)
 
     if (!poll) {
@@ -832,8 +832,8 @@ module.exports = (robot) => {
     if (pollList === undefined) return msg.reply('No polls underway.')
 
     let vote = msg.match[1].toUpperCase()
-    let pollId = msg.match[2]
-    let poll = robot.brain.get(pollList[pollId])
+    let pollNumber = msg.match[2]
+    let poll = robot.brain.get(pollList[pollNumber])
     // we need to get the callerUser's user record so we can update it with this vote
     let callerUser = robot.brain.userForId(msg.message.user.id)
 
@@ -884,9 +884,9 @@ module.exports = (robot) => {
     if (pollList === undefined) return msg.reply('No polls underway.')
 
     let vote = msg.match[2].toUpperCase()
-    let pollId = msg.match[1]
+    let pollNumber = msg.match[1]
     let callerUser = robot.brain.userForId(msg.message.user.id)
-    let poll = robot.brain.get(pollList[pollId])
+    let poll = robot.brain.get(pollList[pollNumber])
 
     if (!poll) {
       return msg.reply('No poll number ' + msg.match[1])
@@ -903,7 +903,7 @@ module.exports = (robot) => {
     poll.votes[callerUser.id] = voteIndex
     callerUser.polls[poll.pollId] = {vote: voteIndex}
 
-    let replyString = 'Changed vote to ' + vote + ': ' + poll.choices[voteIndex] + ' on poll ' + pollId + ':' + poll.title
+    let replyString = 'Changed vote to ' + vote + ': ' + poll.choices[voteIndex] + ' on poll ' + pollNumber + ':' + poll.title
     if (poll.scope === 'partial' || poll.scope === 'part') replyString += '\nChanging vote does not extend poll deadline'
 
     return msg.reply(replyString)
@@ -917,9 +917,9 @@ module.exports = (robot) => {
     let dUser = robot.brain.userForName(delegateUsername)
     if (dUser === undefined || dUser === null) return msg.reply('No username: ' + delegateUsername + '. Have you spelled it correctly?')
 
-    let pollId = msg.match[1]
+    let pollNumber = msg.match[1]
     let callerUser = robot.brain.userForId(msg.message.user.id)
-    let poll = robot.brain.get(pollList[pollId])
+    let poll = robot.brain.get(pollList[pollNumber])
 
     if (!poll) {
       return msg.reply('No poll number ' + msg.match[1])
@@ -952,7 +952,7 @@ module.exports = (robot) => {
       }
     }
 
-    return msg.reply('Delegated vote to ' + delegateUsername + ' on poll ' + pollId + ':' + poll.title)
+    return msg.reply('Delegated vote to ' + delegateUsername + ' on poll ' + pollNumber + ':' + poll.title)
   })
 
   robot.respond(/change delegate vote on poll ([0-9]{1,2}) to ([A-Za-z][A-Za-z0-9._]{2,25})/i, (msg) => {
@@ -966,9 +966,9 @@ module.exports = (robot) => {
 
     if (dUser === undefined || dUser === null) return msg.reply('No username: ' + delegateUsername + '. Have you spelled it correctly?')
 
-    let pollId = msg.match[1]
+    let pollNumber = msg.match[1]
     let callerUser = robot.brain.userForId(msg.message.user.id)
-    let poll = robot.brain.get(pollList[pollId])
+    let poll = robot.brain.get(pollList[pollNumber])
 
     if (!poll) {
       return msg.reply('No poll number ' + msg.match[1])
@@ -983,7 +983,7 @@ module.exports = (robot) => {
     if (!callerUser.polls) callerUser.polls = {}
     callerUser.polls[poll.pollId] = {vote: dUser.id}
 
-    let replyString = 'Changed vote to delegate to ' + delegateUsername + ' on poll ' + pollId + ':' + poll.title
+    let replyString = 'Changed vote to delegate to ' + delegateUsername + ' on poll ' + pollNumber + ':' + poll.title
     if (poll.scope === 'partial' || poll.scope === 'part') replyString += '\nChanging vote does not extend poll deadline'
 
     return msg.reply(replyString)
@@ -995,10 +995,10 @@ module.exports = (robot) => {
     let pollList = robot.brain.get('polls')
     if (pollList === undefined) return msg.reply('No polls underway.')
 
-    let pollId = msg.match[1]
+    let pollNumber = msg.match[1]
     console.log('userForId', msg.message.user.id)
     let callerUser = robot.brain.userForId(msg.message.user.id)
-    let poll = robot.brain.get(pollList[pollId])
+    let poll = robot.brain.get(pollList[pollNumber])
 
     let now = Moment()
     if (!poll) {
@@ -1145,10 +1145,10 @@ module.exports = (robot) => {
 
     if (!pollList) return msg.reply('No polls underway.')
 
-    let pollId = msg.match[1]
-    if (pollList[pollId] === undefined) return msg.reply('No poll number ' + msg.match[1])
+    let pollNumber = msg.match[1]
+    if (pollList[pollNumber] === undefined) return msg.reply('No poll number ' + msg.match[1])
 
-    let poll = robot.brain.get(pollList[pollId])
+    let poll = robot.brain.get(pollList[pollNumber])
     if (!poll) {
       robot.logger.error('Poll is in pollList but no poll data: ' + poll)
       return msg.reply('Poll data missing ' + msg.match[1])
@@ -1234,10 +1234,10 @@ module.exports = (robot) => {
 
     if (!pollList) return msg.reply('No polls underway.')
 
-    let pollId = msg.match[1]
-    if (pollList[pollId] === undefined) return msg.reply('No poll number ' + msg.match[1])
+    let pollNumber = msg.match[1]
+    if (pollList[pollNumber] === undefined) return msg.reply('No poll number ' + msg.match[1])
 
-    let poll = robot.brain.get(pollList[pollId])
+    let poll = robot.brain.get(pollList[pollNumber])
     if (!poll) return msg.reply('No poll number ' + msg.match[1])
 
     if (!poll.closed) return msg.reply('Poll not complete. Status: ' + poll.status)
@@ -1365,38 +1365,38 @@ module.exports = (robot) => {
   robot.respond(/delete poll ([0-9]{1,2})/i, (msg) => {
     if (!_userHasAccess(msg, 'admin')) return
 
-    let pollList = robot.brain.get('polls')
+    const pollNumber = msg.match[1]
 
-    if (!pollList) return msg.reply('No polls underway.')
-
-    let pollId = msg.match[1]
-    if (pollList[pollId] === undefined) return msg.reply('No poll number ' + msg.match[1])
-
-    let poll = robot.brain.get(pollList[pollId])
-    if (!poll) {
-      robot.logger.error('Poll is in pollList but no poll data: ' + poll)
-      return msg.reply('Poll data missing ' + msg.match[1])
-    }
-    msg.reply('Really cancel poll ' + poll.pollNum + ': ' + poll.title + '?')
+    msg.reply('Really delete poll ' + pollNumber + '?')
     conversation.start(msg, confirmConversationModel, (err, msg, confirmDialog) => {
       if (err) console.error(err)
       let dialogData = confirmDialog.fetch()
       let answer = dialogData.answers[0].response.value.toUpperCase()
       if (answer === 'Y') {
-        // first remove from pollList
-        pollList.splice(pollList.indexOf(pollId), 1)
-        robot.brain.set('polls', pollList)
+        // last get the pollId from pollList
+        let pollList = robot.brain.get('polls')
+        let pollId = pollList[pollNumber]
+        let poll = robot.brain.get(pollId)
+
+        if (!poll) {
+          robot.logger.error('Poll is in pollList but no poll data: ' + poll)
+          return msg.reply('Poll data missing ' + msg.match[1])
+        }
 
         // we should add the proposer in case it is a partial poll and there are no participants yet
         // that means we have at least one user (the proposer) in participants
         if (poll.participants.indexOf(poll.proposer) === -1) poll.participants.push(poll.proposer)
         for (let i = 0; i < poll.participants.length; i++) {
           let targetUser = robot.brain.userForId(poll.participants[i])
-          console.log('deleting poll from user ' + targetUser.name)
+          console.log('deleting poll from user ' + targetUser.name + ', ' + targetUser)
           if (targetUser.polls) targetUser.polls.splice(targetUser.polls(pollId), 1)
         }
         // then remove actual poll
         robot.brain.remove(pollId)
+
+        // last delete the poll from pollList
+        let pollIndex = pollList.indexOf(pollId)
+        if (pollIndex !== -1) pollList.splice(pollIndex, 1)
 
         // save in fear of async issues
         robot.brain.save()
