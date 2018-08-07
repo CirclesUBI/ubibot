@@ -1388,10 +1388,9 @@ module.exports = (robot) => {
         if (poll.participants.indexOf(poll.proposer) === -1) poll.participants.push(poll.proposer)
         for (let i = 0; i < poll.participants.length; i++) {
           let targetUser = robot.brain.userForId(poll.participants[i])
-          if (targetUser.polls) {
-            let pollIndex = targetUser.polls.indexOf(pollId)
-            if (pollIndex !== -1) targetUser.polls.splice(pollIndex, 1)
-            console.log('deleted poll from user ' + targetUser.name)
+          if (targetUser.polls[pollId]) {
+            targetUser.polls[pollId] = null
+            console.log('poll nulled from user ' + targetUser.name)
           }
         }
         // then remove actual poll
@@ -1432,10 +1431,9 @@ module.exports = (robot) => {
         if (poll.participants.indexOf(poll.proposer) === -1) poll.participants.push(poll.proposer)
         for (let i = 0; i < poll.participants.length; i++) {
           let targetUser = robot.brain.userForId(poll.participants[i])
-          if (targetUser.polls) {
-            let pollIndex = targetUser.polls.indexOf(pollId)
-            if (pollIndex !== -1) targetUser.polls.splice(pollIndex, 1)
-            console.log('deleted poll from user ' + targetUser.name)
+          if (targetUser.polls[pollId]) {
+            targetUser.polls[pollId] = null
+            console.log('poll nulled from user ' + targetUser.name)
           }
         }
         // then remove actual poll
