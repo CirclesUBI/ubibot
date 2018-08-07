@@ -1392,7 +1392,8 @@ module.exports = (robot) => {
         if (poll.participants.indexOf(poll.proposer) === -1) poll.participants.push(poll.proposer)
         for (let i = 0; i < poll.participants.length; i++) {
           let targetUser = robot.brain.userForId(poll.participants[i])
-          targetUser.polls.splice(targetUser.polls(pollId), 1)
+          console.log('deleting poll from user ' + targetUser.name)
+          if (targetUser.polls) targetUser.polls.splice(targetUser.polls(pollId), 1)
         }
         // then remove actual poll
         robot.brain.remove(pollId)
