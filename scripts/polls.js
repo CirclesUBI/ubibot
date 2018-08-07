@@ -1404,6 +1404,47 @@ module.exports = (robot) => {
     })
   })
 
+  robot.respond(/delete poll id ([0-9a-zA-Z:-]*)/i, (msg) => {
+    if (!_userHasAccess(msg, 'admin')) return
+
+    const pollId = msg.match[1]
+
+    msg.reply('Really delete poll ' + pollId + '?')
+    conversation.start(msg, confirmConversationModel, (err, msg, confirmDialog) => {
+      if (err) console.error(err)
+      let dialogData = confirmDialog.fetch()
+      let answer = dialogData.answers[0].response.value.toUpperCase()
+      if (answer === 'Y') {
+        // last get the pollId from pollList
+        let pollList = robot.brain.get('polls')
+        let poll = robot.brain.get(pollId)
+
+        if (!poll) {
+          robot.logger.error('Poll is in pollList but no poll data: ' + poll)
+          return msg.reply('Poll data missing ' + msg.match[1])
+        }
+
+        // we should add the proposer in case it is a partial poll and there are no participants yet
+        // that means we have at least one user (the proposer) in participants
+        if (poll.participants.indexOf(poll.proposer) === -1) poll.participants.push(poll.proposer)
+        for (let i = 0; i < poll.participants.length; i++) {
+          let targetUser = robot.brain.userForId(poll.participants[i])
+          console.log('deleting poll from user ' + targetUser.name + ', ' + targetUser)
+          if (targetUser.polls) targetUser.polls.splice(targetUser.polls(pollId), 1)
+        }
+        // then remove actual poll
+        robot.brain.remove(pollId)
+
+        // last delete the poll from pollList
+        let pollIndex = pollList.indexOf(pollId)
+        if (pollIndex !== -1) pollList.splice(pollIndex, 1)
+
+        // save in fear of async issues
+        robot.brain.save()
+      }
+    })
+  })
+
   robot.respond(/reset poll schedules/i, (msg) => {
     if (!_userHasAccess(msg, 'admin')) return
 
