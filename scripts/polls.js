@@ -1388,8 +1388,11 @@ module.exports = (robot) => {
         if (poll.participants.indexOf(poll.proposer) === -1) poll.participants.push(poll.proposer)
         for (let i = 0; i < poll.participants.length; i++) {
           let targetUser = robot.brain.userForId(poll.participants[i])
-          console.log('deleting poll from user ' + targetUser.name + ', ' + targetUser)
-          if (targetUser.polls) targetUser.polls.splice(targetUser.polls(pollId), 1)
+          if (targetUser.polls) {
+            let pollIndex = targetUser.polls.indexOf(pollId)
+            if (pollIndex !== -1) targetUser.polls.splice(pollIndex, 1)
+            console.log('deleted poll from user ' + targetUser.name)
+          }
         }
         // then remove actual poll
         robot.brain.remove(pollId)
@@ -1429,8 +1432,11 @@ module.exports = (robot) => {
         if (poll.participants.indexOf(poll.proposer) === -1) poll.participants.push(poll.proposer)
         for (let i = 0; i < poll.participants.length; i++) {
           let targetUser = robot.brain.userForId(poll.participants[i])
-          console.log('deleting poll from user ' + targetUser.name + ', ' + targetUser)
-          if (targetUser.polls) targetUser.polls.splice(targetUser.polls(pollId), 1)
+          if (targetUser.polls) {
+            let pollIndex = targetUser.polls.indexOf(pollId)
+            if (pollIndex !== -1) targetUser.polls.splice(pollIndex, 1)
+            console.log('deleted poll from user ' + targetUser.name)
+          }
         }
         // then remove actual poll
         robot.brain.remove(pollId)
