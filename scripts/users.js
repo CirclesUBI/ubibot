@@ -6,6 +6,8 @@
 //    list all users - list all users by name:username
 //    list online users - list all users currently online by name
 
+const ubibotRoomId = 'dX9MFm7DBvfJHJggq'
+
 function _userHasRole (robot, msg, role) {
   robot.logger.info('Checking if user: ' + msg.message.user.name + ' has role ' + role)
   let user = robot.brain.userForName(msg.message.user.name)
@@ -43,7 +45,7 @@ module.exports = (robot) => {
           fullName: rocketChatUsers[i].name
         })
         user.room = 'ubibot'
-        user.roomID = 'dX9MFm7DBvfJHJggq' // this is the id of the ubibot room
+        user.roomID = ubibotRoomId
         addedUsers.push(user)
         msg.send(addedUsers.length + ' Users added to brain')
       }

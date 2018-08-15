@@ -4,6 +4,9 @@
 // Commands:
 //    ubibot set mode [test|prod]
 //
+
+const ubibotRoomName = 'ubibot'
+
 module.exports = (robot) => {
   function _initBotConfig () {
     // get configs from brain
@@ -26,6 +29,8 @@ module.exports = (robot) => {
       config.mode = mode
       robot.brain.set('botConfig', config)
       res.reply('botConfig.mode set to `' + mode + '`')
+
+      if (config.mode === 'prod') robot.send({room: ubibotRoomName}, "*Hi Everyone!* I'm back and at your service :sparkling_heart:")
     }
   })
 }

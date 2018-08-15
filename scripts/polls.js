@@ -1071,7 +1071,7 @@ module.exports = (robot) => {
     let replyString = ''
     for (let i = 0; i < pollList.length; i++) {
       poll = robot.brain.get(pollList[i])
-      replyString += i + '. ' + poll.title + ' (' + poll.status + ')\n'
+      replyString += '*(' + i + ')*' + poll.title + ' (' + poll.status + ')\n'
     }
     replyString = replyString.slice(0, -1) // cut of last '\n';
     return msg.reply(replyString)
@@ -1166,13 +1166,14 @@ module.exports = (robot) => {
       return msg.reply('Poll data missing ' + msg.match[1])
     }
 
-    let replyString = 'Poll #' + poll.pollNum + '\n'
-    replyString += 'Title: ' + poll.title + ' (' + poll.type + ')\n'
-    replyString += 'Description: ' + poll.description + '\n'
-    if (poll.pollLink) replyString += 'Link: ' + poll.pollLink + '\n'
+    let replyString = '*Poll #' + poll.pollNum + '*\n'
+    replyString += '*Title*: ' + poll.title + ' (' + poll.type + ')\n'
+    replyString += '*Description*: ' + poll.description + '\n'
+    if (poll.pollLink) replyString += '*Link*: ' + poll.pollLink + '\n'
 
+    replyString += '*Choices*: ' + poll.pollLink + '\n'
     for (let i = 0; i < poll.numOptions; i++) {
-      replyString += poll.letters[i] + '. ' + poll.choices[i] + '\n'
+      replyString += '(' + poll.letters[i] + ') ' + poll.choices[i] + '\n'
     }
 
     if (poll.closed) {
@@ -1198,15 +1199,15 @@ module.exports = (robot) => {
       if (poll.status === 'Cancelled') {
         replyString += 'Poll was cancelled. No Results.'
       } else if (poll.results.draw.length > 0) {
-        replyString += 'Result: ' + poll.results.draw.length + '-way draw between ' + poll.letters[poll.results.draw[0]] + ' with ' + poll.results.votes[poll.results.draw[0]].count + ' votes\n'
+        replyString += '*Result*: ' + poll.results.draw.length + '-way draw between ' + poll.letters[poll.results.draw[0]] + ' with ' + poll.results.votes[poll.results.draw[0]].count + ' votes\n'
         for (let i = 1; i < poll.results.draw.length; i++) {
           replyString += 'and ' + poll.letters[poll.results.draw[i]] + ' with ' + poll.results.votes[poll.results.draw[i]].count + ' votes\n'
         }
       } else if (poll.results.winner) {
-        replyString += 'Result: ' + poll.results.winner.letter + ' with ' + poll.results.winner.count + ' votes\n'
+        replyString += '*Result*: ' + poll.results.winner.letter + ' with ' + poll.results.winner.count + ' votes\n'
       }
 
-      replyString += 'Status: ' + poll.status + '\n'
+      replyString += '*Status*: ' + poll.status + '\n'
       if (poll.status === 'Vetoed') {
         replyString += '*This poll was vetoed by ' + robot.brain.userForId(poll.vetoedBy).fullName + '*\n'
         if (poll.vetoReason) replyString += 'Reason: ' + poll.vetoReason
@@ -1228,7 +1229,7 @@ module.exports = (robot) => {
       }
 
       let end = Moment(poll.endTime)
-      replyString += 'Poll ends ' + end.fromNow()
+      replyString += '*Poll End*: ' + end.fromNow()
     }
 
     return msg.reply(replyString)

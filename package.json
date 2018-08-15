@@ -1,7 +1,7 @@
 {
   "name": "ubibot",
-  "version": "0.2.3",
-  "description": "Circles house bot for fun and productivity",
+  "version": "0.2.4",
+  "description": "Circles chat bot for fun and productivity",
   "private": true,
   "author": "ed murphy <edzillion@gmail.com>",
   "main": "bin/hubot",
