@@ -653,10 +653,15 @@ module.exports = (robot) => {
   }
 
   function _resetPollNumbers (pollList) {
+    let returnString = ''
     for (let i = 0; i < pollList.length; i++) {
       let poll = robot.brain.get(pollList[i])
-      poll.pollNum = i + 1
+      if (poll.pollNum !== i) {
+        poll.pollNum = i
+        returnString += 'poll ' + i + ' reset\n'
+      }
     }
+    return returnString
   }
 
   var conversation = new DynamicConversation(robot)
@@ -1468,11 +1473,11 @@ module.exports = (robot) => {
     let pollList = robot.brain.get('polls')
     if (!pollList) return msg.reply('No polls underway.')
 
-    _resetPollNumbers(pollList)
+    let returnString = _resetPollNumbers(pollList)
 
     robot.brain.save()
 
-    return msg.reply('poll numbers reset')
+    return msg.reply(returnString)
   })
 
   // this is needed because schedules are lost on reboot.
