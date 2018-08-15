@@ -1536,6 +1536,6 @@ module.exports = (robot) => {
 
       if (poll.schedule) replyString += '(' + i + ') ' + txt + '\n'
     }
-    return msg.reply(replyString.toString())
+    return msg.reply(replyString)
   })
 }
