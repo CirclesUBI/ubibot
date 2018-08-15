@@ -24,7 +24,7 @@ module.exports = (robot) => {
     var config = _initBotConfig()
     const ubibotRoomObj = {
       user: {
-        roomID: robot.getRoomId(ubibotRoomName)
+        roomID: robot.adapter.getRoomId(ubibotRoomName)
       }
     }
 
@@ -35,7 +35,7 @@ module.exports = (robot) => {
       robot.brain.set('botConfig', config)
       res.reply('botConfig.mode set to `' + mode + '`')
 
-      if (config.mode === 'prod') robot.send(ubibotRoomObj, "*Hi Everyone!* I'm back and at your service :sparkling_heart:")      
+      if (config.mode === 'prod') robot.send(ubibotRoomObj, "*Hi Everyone!* I'm back and at your service :sparkling_heart:")
     }
   })
 }
