@@ -1467,7 +1467,8 @@ module.exports = (robot) => {
           poll.schedule = Schedule.scheduleJob(poll.endTime.toDate(), function (pollId) {
             _endPoll(pollId)
           }.bind(null, poll.pollId))
-          poll.schedule.name = 'Poll ' + poll.pollNum + ' _endPoll()'
+          let pollString = JSON.stringify(poll.schedule, null, 2)
+          console.log(pollString)
         } else {
           // this poll is not closed but it ended in the past. end it now.
           console.log('poll ' + poll.pollNum + ' needs to be ended as it closed in the past')
