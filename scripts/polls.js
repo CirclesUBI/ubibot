@@ -354,7 +354,7 @@ module.exports = (robot) => {
     let pollMessage = '*Poll #' + (poll.pollNum) + ' started!*\n'
     pollMessage += 'Title: ' + poll.title + ' (' + poll.type.toUpperCase() + ')\n'
     pollMessage += 'Description: ' + poll.description + '\n'
-    console.log(poll.pollLink)
+
     if (poll.pollLink) pollMessage += 'Link: ' + poll.pollLink + '\n'
 
     for (let i = 0; i < poll.numOptions; i++) {
@@ -374,7 +374,11 @@ module.exports = (robot) => {
       }
       robot.send({room: pollingRoomName}, pollMessage)
     } else if (config.mode === 'test') {
+      let recipients = robot.auth.usersWithRole('core')
+      const targetUser = robot.brain.userForName(recipients[3])
+      console.log('targetUser: ' + targetUser)
       const adminUser = this.robot.brain.userForId(adminUserId)
+      console.log('adminUser: ' + adminUser)
       robot.adapter.sendDirect({user: adminUser}, pollMessage)
     } else {
       console.error('botConfig.mode not set')
