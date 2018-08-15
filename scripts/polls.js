@@ -652,6 +652,13 @@ module.exports = (robot) => {
     return _isCircularDelegation(vote, parents, votes)
   }
 
+  function _resetPollNumbers (pollList) {
+    for (let i = 0; i < pollList.length; i++) {
+      let poll = robot.brain.get(pollList[i])
+      poll.pollNum = i + 1
+    }
+  }
+
   var conversation = new DynamicConversation(robot)
 
   robot.respond(/start a poll/i, function (msg) {
@@ -1398,6 +1405,9 @@ module.exports = (robot) => {
         let pollIndex = pollList.indexOf(pollId)
         if (pollIndex !== -1) pollList.splice(pollIndex, 1)
 
+        // then reset pollNums
+        _resetPollNumbers(pollList)
+
         // save in fear of async issues
         robot.brain.save()
       }
@@ -1442,15 +1452,27 @@ module.exports = (robot) => {
         if (pollIndex !== -1) pollList.splice(pollIndex, 1)
 
         // then reset pollNums
-        for (let i = 0; i < pollList.length; i++) {
-          poll = robot.brain.get(pollList[i])
-          poll.pollNum = i + 1
-        }
+        _resetPollNumbers(pollList)
 
         // save in fear of async issues
         robot.brain.save()
       }
     })
+  })
+
+  // this is needed because sometimes pollNum's get out of sync
+  // todo: automate this
+  robot.respond(/reset poll numbers/i, (msg) => {
+    if (!_userHasAccess(msg, 'admin')) return
+
+    let pollList = robot.brain.get('polls')
+    if (!pollList) return msg.reply('No polls underway.')
+
+    _resetPollNumbers(pollList)
+
+    robot.brain.save()
+
+    return msg.reply('poll numbers reset')
   })
 
   // this is needed because schedules are lost on reboot.
@@ -1525,6 +1547,7 @@ module.exports = (robot) => {
     let replyString = ''
     for (let i = 0; i < pollList.length; i++) {
       let poll = robot.brain.get(pollList[i])
+      console.log('poll ' + poll.pollNum)
       if (!poll) console.log('No poll number ' + msg.match[1] + ' while updating schedules')
 
       let pollString = JSON.stringify(poll.schedule, null, 2)
