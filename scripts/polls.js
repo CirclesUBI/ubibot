@@ -374,13 +374,7 @@ module.exports = (robot) => {
       }
       robot.send({room: pollingRoomName}, pollMessage)
     } else if (config.mode === 'test') {
-      let recipients = robot.auth.usersWithRole('core')
-      const targetUser = robot.brain.userForName(recipients[3])
-      let userString = JSON.stringify(targetUser, null, 2)
-      console.log('targetUser: ' + userString)
       const adminUser = robot.brain.userForId(adminUserId)
-      userString = JSON.stringify(adminUser, null, 2)
-      console.log('adminUser: ' + userString)
       robot.adapter.sendDirect({user: adminUser}, pollMessage)
     } else {
       console.error('botConfig.mode not set')
@@ -637,7 +631,7 @@ module.exports = (robot) => {
       }
       robot.send({room: pollingRoomName}, resultText)
     } else if (config.mode === 'test') {
-      const adminUser = this.robot.brain.userForId(adminUserId)
+      const adminUser = robot.brain.userForId(adminUserId)
       robot.adapter.sendDirect({user: adminUser}, resultText)
     } else {
       console.error('botConfig.mode not set')
