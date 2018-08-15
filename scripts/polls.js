@@ -20,7 +20,7 @@
 //    ubibot list polls - List all polls
 //    ubibot list open polls - List open polls you have not voted on
 //    ubibot show poll <number> - Show poll details
-//    ubibot audit poll <number> - Audit poll results
+//    ubibot audit poll <number> - Audit poll results [ADMIN ONLY]
 //    ubibot veto poll - Vetoes a passed poll
 //
 // Author:
@@ -369,13 +369,13 @@ module.exports = (robot) => {
       let recipients = robot.auth.usersWithRole('core')
       console.log('sending poll ' + poll.pollNum + ' announce to:' + recipients)
       for (let i = 0; i < recipients.length; i++) {
-        let targetUser = robot.brain.userForName(recipients[i])
+        const targetUser = robot.brain.userForName(recipients[i])
         robot.adapter.sendDirect({user: targetUser}, pollMessage)
       }
       robot.send({room: pollingRoomName}, pollMessage)
     } else if (config.mode === 'test') {
-      let adminUser = robot.brain.get({user: adminUserId})
-      robot.adapter.sendDirect(adminUser, pollMessage)
+      const adminUser = this.robot.brain.userForId(adminUserId)
+      robot.adapter.sendDirect({user: adminUser}, pollMessage)
     } else {
       console.error('botConfig.mode not set')
     }
@@ -631,8 +631,8 @@ module.exports = (robot) => {
       }
       robot.send({room: pollingRoomName}, resultText)
     } else if (config.mode === 'test') {
-      let adminUser = robot.brain.get({user: adminUserId})
-      robot.adapter.sendDirect(adminUser, resultText)
+      const adminUser = this.robot.brain.userForId(adminUserId)
+      robot.adapter.sendDirect({user: adminUser}, resultText)
     } else {
       console.error('botConfig.mode not set')
     }
@@ -1359,9 +1359,6 @@ module.exports = (robot) => {
 
   // ADMIN ONLY COMMANDS
 
-  // this is needed because schedules are lost on reboot.
-  // todo: automate this
-
   robot.respond(/delete poll ([0-9]{1,2})/i, (msg) => {
     if (!_userHasAccess(msg, 'admin')) return
 
@@ -1449,6 +1446,8 @@ module.exports = (robot) => {
     })
   })
 
+  // this is needed because schedules are lost on reboot.
+  // todo: automate this
   robot.respond(/reset poll schedules/i, (msg) => {
     if (!_userHasAccess(msg, 'admin')) return
 
