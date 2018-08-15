@@ -1071,7 +1071,7 @@ module.exports = (robot) => {
     let replyString = ''
     for (let i = 0; i < pollList.length; i++) {
       poll = robot.brain.get(pollList[i])
-      replyString += '*(' + i + ')*' + poll.title + ' (' + poll.status + ')\n'
+      replyString += '*(' + i + ')* ' + poll.title + ' (' + poll.status + ')\n'
     }
     replyString = replyString.slice(0, -1) // cut of last '\n';
     return msg.reply(replyString)

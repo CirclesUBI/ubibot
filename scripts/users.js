@@ -44,6 +44,7 @@ module.exports = (robot) => {
           alias: rocketChatUsers[i].alias,
           fullName: rocketChatUsers[i].name
         })
+        // todo: why do I have to set this again?
         user.room = 'ubibot'
         user.roomID = ubibotRoomId
         addedUsers.push(user)

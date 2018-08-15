@@ -22,6 +22,11 @@ module.exports = (robot) => {
 
   robot.respond(/set mode (prod|test)/i, (res) => {
     var config = _initBotConfig()
+    const ubibotRoomObj = {
+      user: {
+        roomID: robot.getRoomId(ubibotRoomName)
+      }
+    }
 
     let mode = res.match[1].toLowerCase()
     if (config.mode === mode) res.reply('already in ' + mode + ' mode')
@@ -30,7 +35,7 @@ module.exports = (robot) => {
       robot.brain.set('botConfig', config)
       res.reply('botConfig.mode set to `' + mode + '`')
 
-      if (config.mode === 'prod') robot.send({room: ubibotRoomName}, "*Hi Everyone!* I'm back and at your service :sparkling_heart:")
+      if (config.mode === 'prod') robot.send(ubibotRoomObj, "*Hi Everyone!* I'm back and at your service :sparkling_heart:")      
     }
   })
 }
