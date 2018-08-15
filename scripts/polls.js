@@ -1154,7 +1154,8 @@ module.exports = (robot) => {
       return msg.reply('Poll data missing ' + msg.match[1])
     }
 
-    let replyString = 'Title: ' + poll.title + ' (' + poll.type.toUpperCase() + ')\n'
+    let replyString = 'Poll #' + poll.pollNum + '\n'
+    replyString = 'Title: ' + poll.title + ' (' + poll.type + ')\n'
     replyString += 'Description: ' + poll.description + '\n'
     if (poll.pollLink) replyString += 'Link: ' + poll.pollLink + '\n'
 
@@ -1439,6 +1440,12 @@ module.exports = (robot) => {
         // last delete the poll from pollList
         let pollIndex = pollList.indexOf(pollId)
         if (pollIndex !== -1) pollList.splice(pollIndex, 1)
+
+        // then reset pollNums
+        for (let i = 0; i < pollList.length; i++) {
+          poll = robot.brain.get(pollList[i])
+          poll.pollNum = i + 1
+        }
 
         // save in fear of async issues
         robot.brain.save()
