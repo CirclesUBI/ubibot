@@ -1155,7 +1155,7 @@ module.exports = (robot) => {
     }
 
     let replyString = 'Poll #' + poll.pollNum + '\n'
-    replyString = 'Title: ' + poll.title + ' (' + poll.type + ')\n'
+    replyString += 'Title: ' + poll.title + ' (' + poll.type + ')\n'
     replyString += 'Description: ' + poll.description + '\n'
     if (poll.pollLink) replyString += 'Link: ' + poll.pollLink + '\n'
 
@@ -1526,6 +1526,10 @@ module.exports = (robot) => {
     for (let i = 0; i < pollList.length; i++) {
       let poll = robot.brain.get(pollList[i])
       if (!poll) console.log('No poll number ' + msg.match[1] + ' while updating schedules')
+
+      let pollString = JSON.stringify(poll.schedule, null, 2)
+      console.log(pollString)
+      msg.reply(pollString)
 
       if (typeof poll.schedule !== 'function') continue
 
