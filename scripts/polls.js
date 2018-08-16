@@ -314,6 +314,12 @@ const vetoConfirmConversationModel = {
 }
 
 module.exports = (robot) => {
+  const pollingRoomObj = {
+    user: {
+      roomID: robot.adapter.getRoomId(pollingRoomName)
+    }
+  }
+
   function _userHasAccess (msg, role) {
     const config = robot.brain.get('botConfig')
     if (config && config.mode === 'prod') {
@@ -372,7 +378,7 @@ module.exports = (robot) => {
         const targetUser = robot.brain.userForName(recipients[i])
         robot.adapter.sendDirect({user: targetUser}, pollMessage)
       }
-      robot.send({room: pollingRoomName}, pollMessage)
+      robot.send(pollingRoomObj, pollMessage)
     } else if (config.mode === 'test') {
       const adminUser = robot.brain.userForId(adminUserId)
       robot.adapter.sendDirect({user: adminUser}, pollMessage)
