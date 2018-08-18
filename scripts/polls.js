@@ -56,7 +56,7 @@ const confirmConversationModel = {
   onAbortMessage: 'You have cancelled this conversation.',
   conversation: [
     {
-      question: 'Are you sure? [Y/y/N/n]',
+      question: 'Are you sure? [y/n]',
       answer: {
         type: 'choice',
         options: [
@@ -84,7 +84,7 @@ const confirmConversationModel = {
         ]
       },
       required: true,
-      error: "Sorry, I didn't understand your response. Please say [Y/y] or [N/n]"
+      error: "Sorry, I didn't understand your response. Please say [y] or [n]"
     }
   ]
 }
@@ -261,7 +261,7 @@ const pollConfirmConversationModel = {
         ]
       },
       required: true,
-      error: "Sorry, I didn't understand your response. Please say [Y/y] or [N/n]"
+      error: "Sorry, I didn't understand your response. Please say [y] or [n]"
     }
   ]
 }
@@ -272,7 +272,7 @@ const vetoConfirmConversationModel = {
   onAbortMessage: 'You have cancelled this conversation.',
   conversation: [
     {
-      question: 'Are you sure? [Y/y/N/n]',
+      question: 'Are you sure? [y/n]',
       answer: {
         type: 'choice',
         options: [
@@ -300,7 +300,7 @@ const vetoConfirmConversationModel = {
         ]
       },
       required: true,
-      error: "Sorry, I didn't understand your response. Please say [Y/y] or [N/n]"
+      error: "Sorry, I didn't understand your response. Please say [y] or [n]"
     },
     {
       question: 'Add your reason for vetoing here: (not required)',
